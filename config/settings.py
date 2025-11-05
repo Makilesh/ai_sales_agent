@@ -10,7 +10,7 @@ class RedditConfig:
     client_id: str = config("REDDIT_CLIENT_ID", default="")
     client_secret: str = config("REDDIT_CLIENT_SECRET", default="")
     user_agent: str = config("REDDIT_USER_AGENT", default="LeadScrapingBot/1.0")
-    rate_limit: int = 60  # requests per minute
+    rate_limit: int = 60  # requests per minute (PRAW default)
     subreddits: list[str] = field(default_factory=lambda: [
         "artificial",
         "ArtificialIntelligence",
@@ -24,8 +24,15 @@ class DiscordConfig:
     """Discord API configuration."""
     bot_token: str = config("DISCORD_BOT_TOKEN", default="")
     rate_limit: int = 50  # requests per second
-    channels: list[str] = field(default_factory=list)  # Channel IDs to monitor
-    guilds: list[str] = field(default_factory=list)  # Guild IDs to monitor
+    channels: list[str] = field(default_factory=lambda: [
+        # Add your Discord channel IDs here
+        # How to get: Right-click any channel → "Copy Channel ID"
+        
+        "1118264005207793674",  # Perplexity: #ask-community
+        # Add more channel IDs here if needed:
+        # "another_channel_id",  # Example: another channel
+    ])  # Channel IDs to monitor
+    guilds: list[str] = field(default_factory=list)  # Guild IDs to monitor (optional)
 
 
 @dataclass
@@ -33,7 +40,7 @@ class SlackConfig:
     """Slack API configuration."""
     bot_token: str = config("SLACK_BOT_TOKEN", default="")
     app_token: str = config("SLACK_APP_TOKEN", default="")
-    rate_limit: int = 1  # requests per second (Tier 1)
+    rate_limit: int = 1  # requests per second (Tier 1 = 1/sec, Tier 2+ = 100-20k/min)
     channels: list[str] = field(default_factory=list)  # Channel IDs to monitor
     workspaces: list[str] = field(default_factory=list)  # Workspace IDs
 
