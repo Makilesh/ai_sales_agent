@@ -1,0 +1,17 @@
+# Multi-Source Lead Scraping Engine - Phase 1
+# Python 3.12.10
+
+# Reddit API
+praw==7.7.1
+
+# Discord API
+discord.py==2.3.2
+
+# Slack API
+slack_sdk==3.27.1
+
+# Async HTTP client
+aiohttp==3.9.3
+
+# Environment variable management
+python-decouple==3.8
