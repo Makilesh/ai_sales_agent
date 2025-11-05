@@ -74,8 +74,11 @@ class RedditScraper(BaseScraper):
                 
                 # Check comments
                 try:
+                    # Apply rate limit before fetching comments
+                    await self._apply_rate_limit()
                     # Wrap blocking PRAW operations in thread executor
                     await asyncio.to_thread(submission.comments.replace_more, limit=0)
+                    await self._apply_rate_limit()
                     all_comments = await asyncio.to_thread(submission.comments.list)
                     
                     for comment in all_comments[:10]:  # First 10 comments
