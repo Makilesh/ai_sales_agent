@@ -48,7 +48,8 @@ class BaseScraper(ABC):
             return
         
         # Calculate delay based on rate limit
-        # rate_limit is requests per minute for most platforms
+        # NOTE: Subclasses should override if using different time units
+        # Default: rate_limit is requests per minute
         delay_seconds = 60.0 / self.rate_limit if self.rate_limit > 0 else 1.0
         
         elapsed = (datetime.now() - self.last_request_time).total_seconds()
