@@ -12,8 +12,10 @@ class RedditConfig:
     user_agent: str = config("REDDIT_USER_AGENT", default="LeadScrapingBot/1.0")
     rate_limit: int = 60  # requests per minute (PRAW default)
     subreddits: list[str] = field(default_factory=lambda: [
-        "artificial",
-        "ArtificialIntelligence",
+        # "artificial",
+        # "ArtificialIntelligence",
+        "rwa"
+        
         # "smallbusiness",
         # "SaaS"
     ])
