@@ -1,11 +1,14 @@
 """
-LinkedIn Scraper via Apify API - PROFESSIONAL SOLUTION
+LinkedIn Scraper via Apify API - SERVICE LEAD DISCOVERY
 
-This scraper uses Apify's LinkedIn Posts Scraper actor for reliable, account-safe scraping.
-- NO risk to your LinkedIn account (uses Apify's infrastructure)
-- Professional data extraction service
+This scraper finds POTENTIAL CLIENTS asking for services (not job postings).
+Focus: People/companies looking for help with RWA, crypto, blockchain, AI, etc.
+
+Features:
+- Comprehensive job posting filter (eliminates ALL hiring posts)
+- Service classification by industry (RWA, crypto, AI, blockchain, etc.)
+- No risk to LinkedIn account (uses Apify infrastructure)
 - Handles authentication, rate limiting, and anti-bot measures
-- Requires: Apify API token (free tier: 5,000 credits/month)
 
 Setup:
 1. Create free account at https://apify.com
@@ -13,11 +16,11 @@ Setup:
 3. Set APIFY_TOKEN in .env file
 4. Install: pip install apify-client
 
-Actor used: apify/linkedin-posts-scraper
-Docs: https://apify.com/apify/linkedin-posts-scraper
+Actor used: supreme_coder/linkedin-post (no cookies required)
 """
 
 import asyncio
+import urllib.parse
 from datetime import datetime
 from typing import Optional
 
@@ -28,14 +31,91 @@ from scrapers.base import BaseScraper
 
 
 class LinkedInApifyScraper(BaseScraper):
-    """Professional LinkedIn scraper using Apify API service."""
+    """Professional LinkedIn scraper for finding SERVICE INQUIRIES (not job postings)."""
     
+    # ===================================================================
+    # COMPREHENSIVE JOB POSTING FILTER - Eliminates ALL hiring content
+    # ===================================================================
     JOB_POSTING_KEYWORDS = [
-        'hiring', 'job opening', "we're hiring", 'join our team',
-        'apply now', 'career opportunity', 'now hiring', 'careers',
-        'job opportunity', 'seeking candidates', 'vacancy', 
-        'position available', 'open position'
+        # Direct hiring language
+        'hiring', 'job opening', "we're hiring", "we are hiring", 'join our team',
+        'apply now', 'career opportunity', 'now hiring', 'careers', 'open position',
+        'job opportunity', 'seeking candidates', 'vacancy', 'position available',
+        
+        # "Looking for" in hiring context
+        'looking for a', 'looking for an', 'looking for:', 
+        'we are looking for', "we're looking for", 'our team is looking for',
+        'currently looking for', 'actively looking for',
+        
+        # Application/CV language
+        'send your cv', 'send cv', 'submit your cv', 'submit cv', 
+        'apply below', 'apply here', 'drop your cv', 'share your cv',
+        'send resume', 'submit resume', 'apply at', 'applications open',
+        
+        # Open to work (people looking for jobs - NOT our clients)
+        'open to work', 'opentowork', '#opentowork', 'seeking opportunities',
+        'looking for opportunities', 'available for work', 'job search',
+        'actively seeking', 'ready to join', 'exploring opportunities',
+        
+        # Recruitment language
+        'candidate', 'candidates wanted', 'recruitment', 'recruiter', 'recruiting',
+        'talent acquisition', 'hr is hiring', 'join us', 'join our', 'become part of',
+        
+        # Job details indicators
+        'full-time', 'full time', 'part-time', 'part time', 'contract role',
+        'remote position', 'on-site position', 'hybrid position', 'hybrid role',
+        'salary:', 'compensation:', 'benefits:', 'ctc:', 'package:',
+        'years experience', 'years of experience', 'yrs exp', '+ years',
+        
+        # Job titles in hiring context (strong indicators)
+        'software engineer to join', 'developer to join', 'designer to join',
+        'manager to join', 'analyst to join', 'consultant to join',
+        'role at', 'position at', 'opening at', 'opportunity at',
+        
+        # Resume/profile posting
+        'my resume', 'my cv', 'here is my', 'check out my resume',
+        'download my cv', 'view my profile'
     ]
+    
+    # ===================================================================
+    # SERVICE TYPE CLASSIFICATION - Tag leads by industry/service type
+    # ===================================================================
+    SERVICE_CATEGORIES = {
+        'RWA': [
+            'real world asset', 'rwa', 'tokenization', 'tokenize', 
+            'asset tokenization', 'real estate token', 'physical asset',
+            'commodities', 'tokenized asset', 'on-chain asset'
+        ],
+        'Crypto': [
+            'cryptocurrency', 'crypto', 'bitcoin', 'ethereum', 'defi',
+            'decentralized finance', 'crypto exchange', 'crypto wallet',
+            'crypto payment', 'crypto integration', 'web3', 'dapp'
+        ],
+        'Blockchain': [
+            'blockchain', 'smart contract', 'distributed ledger', 'dlt',
+            'blockchain development', 'blockchain solution', 'blockchain platform',
+            'consensus', 'node', 'blockchain integration'
+        ],
+        'NFT': [
+            'nft', 'non-fungible token', 'nft marketplace', 'nft collection',
+            'digital collectible', 'nft platform', 'nft minting'
+        ],
+        'AI/ML': [
+            'artificial intelligence', 'machine learning', 'ai solution',
+            'ml model', 'deep learning', 'neural network', 'ai integration',
+            'chatbot', 'ai automation', 'predictive analytics'
+        ],
+        'Fintech': [
+            'fintech', 'financial technology', 'payment gateway', 'payment processing',
+            'digital payment', 'banking solution', 'financial platform',
+            'lending platform', 'investment platform'
+        ],
+        'Development': [
+            'software development', 'app development', 'web development',
+            'mobile app', 'custom solution', 'api integration',
+            'system integration', 'platform development'
+        ]
+    }
     
     def __init__(
         self,
@@ -53,14 +133,15 @@ class LinkedInApifyScraper(BaseScraper):
         scrape_reactions: bool = True,
         only_posts: bool = True,
         include_sponsored: bool = False,
-        min_reactions: int = 0
+        min_reactions: int = 0,
+        max_total_leads: int = 200  # Global limit across all keywords
     ) -> None:
         """
-        Initialize LinkedIn Apify scraper.
+        Initialize LinkedIn Apify scraper for SERVICE LEAD discovery.
         
         Args:
             apify_token: Apify API token
-            keywords: Search keywords for LinkedIn posts
+            keywords: Search keywords for LinkedIn posts (SERVICE-FOCUSED, not job-related)
             max_posts_per_keyword: Maximum posts to fetch per keyword
             rate_limit: API requests per minute
             actor_id: Apify actor ID to use
@@ -74,10 +155,12 @@ class LinkedInApifyScraper(BaseScraper):
             only_posts: Exclude company updates/ads
             include_sponsored: Include sponsored content
             min_reactions: Minimum reactions to consider
+            max_total_leads: Global limit - stop scraping after this many total leads
         """
         super().__init__(keywords, rate_limit)
         self.apify_token = apify_token
         self.max_posts_per_keyword = max_posts_per_keyword
+        self.max_total_leads = max_total_leads
         self.actor_id = actor_id
         self.linkedin_cookie = linkedin_cookie
         self.proxy_config = proxy_config
@@ -118,37 +201,80 @@ class LinkedInApifyScraper(BaseScraper):
         return True
     
     def _is_job_posting(self, text: str) -> bool:
-        """Check if content appears to be a job posting."""
+        """
+        Check if content is a job posting or hiring-related post.
+        
+        Returns True if it's a job post (should be filtered out).
+        Returns False if it's a potential service inquiry (keep it).
+        """
         if not text:
             return False
         
         text_lower = text.lower()
+        
+        # Check for job posting keywords
         return any(keyword in text_lower for keyword in self.JOB_POSTING_KEYWORDS)
     
+    def _classify_service_type(self, text: str) -> list[str]:
+        """
+        Classify lead by service category (RWA, Crypto, AI, etc.).
+        
+        Returns list of matching categories.
+        """
+        if not text:
+            return []
+        
+        text_lower = text.lower()
+        categories = []
+        
+        for category, keywords in self.SERVICE_CATEGORIES.items():
+            if any(keyword.lower() in text_lower for keyword in keywords):
+                categories.append(category)
+        
+        return categories if categories else ['General']
+    
     async def scrape(self) -> list[Lead]:
-        """Scrape LinkedIn posts via Apify for all keywords."""
+        """Scrape LinkedIn posts via Apify for all keywords with global rate limit."""
         all_leads: list[Lead] = []
         
-        print(f"🔍 Starting LinkedIn scraping via Apify (max {self.max_posts_per_keyword} posts/keyword)")
+        print(f"🔍 Starting LinkedIn scraping via Apify")
+        print(f"   • Max posts per keyword: {self.max_posts_per_keyword}")
+        print(f"   • Global lead limit: {self.max_total_leads}")
+        print(f"   • Keywords to search: {len(self.keywords)}")
+        print(f"🎯 Focus: SERVICE INQUIRIES (filtering out ALL job postings)")
         
-        for keyword in self.keywords:
+        for idx, keyword in enumerate(self.keywords, 1):
+            # Check global limit BEFORE scraping each keyword
+            if len(all_leads) >= self.max_total_leads:
+                print(f"\n⚠️  Global lead limit reached ({self.max_total_leads} leads)")
+                print(f"   Stopping early (scraped {idx-1}/{len(self.keywords)} keywords)")
+                print(f"   💰 Credit savings: Skipped {len(self.keywords) - idx + 1} keywords")
+                break
+            
             try:
-                await self._apply_rate_limit()
-                leads = await self._scrape_keyword(keyword)
+                # Calculate remaining budget for this keyword
+                remaining_budget = self.max_total_leads - len(all_leads)
+                posts_to_fetch = min(self.max_posts_per_keyword, remaining_budget)
+                
+                if posts_to_fetch <= 0:
+                    break
+                
+                print(f"\n  [{idx}/{len(self.keywords)}] Keyword: '{keyword}' (budget: {posts_to_fetch} posts)")
+                leads = await self._scrape_keyword(keyword, posts_to_fetch)
                 all_leads.extend(leads)
-                print(f"  ✓ Extracted {len(leads)} leads from '{keyword}'")
+                print(f"  ✓ Extracted {len(leads)} service leads | Total: {len(all_leads)}/{self.max_total_leads}")
             except Exception as e:
-                print(f"  ⚠️  Error scraping '{keyword}': {e}")
-                continue
+                print(f"  ✗ Error scraping '{keyword}': {e}")
         
-        print(f"✓ Total LinkedIn leads collected: {len(all_leads)}")
+        print(f"\n✅ Scraping complete: {len(all_leads)} LinkedIn service leads collected")
         return all_leads
     
-    async def _scrape_keyword(self, keyword: str) -> list[Lead]:
+    async def _scrape_keyword(self, keyword: str, posts_limit: int = None) -> list[Lead]:
         """Scrape LinkedIn posts for a single keyword via Apify."""
         leads: list[Lead] = []
         
-        print(f"  → Searching LinkedIn for: '{keyword}'")
+        # Use custom limit if provided (for rate limiting), otherwise use default
+        effective_limit = posts_limit if posts_limit is not None else self.max_posts_per_keyword
         
         try:
             # Build LinkedIn search URL for the keyword
@@ -158,53 +284,41 @@ class LinkedInApifyScraper(BaseScraper):
             
             # Detect actor type and configure input accordingly
             if 'supreme_coder/linkedin-post' in self.actor_id:
-                # supreme_coder actor - No cookies needed, takes URLs
+                # supreme_coder/linkedin-post actor - simple input, no cookies
                 run_input = {
                     'urls': [search_url],
-                    'limit': self.max_posts_per_keyword,
+                    'limit': effective_limit
                 }
             elif 'curious_coder' in self.actor_id:
-                # curious_coder actor - Requires cookies
+                # curious_coder actor - requires cookies
                 run_input = {
                     'urls': [search_url],
-                    'maxPosts': self.max_posts_per_keyword,
-                }
-                
-                # Add authentication if provided
-                if self.linkedin_cookie:
-                    run_input['cookie'] = [{
+                    'maxPosts': effective_limit,
+                    'cookie': [{
                         'name': 'li_at',
                         'value': self.linkedin_cookie,
                         'domain': '.linkedin.com'
-                    }]
-                else:
-                    print(f"  ⚠️  WARNING: No LinkedIn cookie provided - actor may fail")
-                
-                # Add user agent
-                run_input['userAgent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                
-                # Add proxy
-                if self.proxy_config:
-                    run_input['proxy'] = self.proxy_config
-                else:
-                    run_input['proxy'] = {'useApifyProxy': True}
+                    }],
+                    'userAgent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'proxy': {
+                        'useApifyProxy': True
+                    } if not self.proxy_config else {
+                        'proxyUrls': [self.proxy_config]
+                    }
+                }
             else:
-                # Default/generic actor format
+                # Generic actor
                 run_input = {
-                    'searches': [keyword],
-                    'maxPosts': self.max_posts_per_keyword,
-                    'scrapeComments': self.scrape_comments,
-                    'scrapeReactions': self.scrape_reactions,
+                    'urls': [search_url],
+                    'maxResults': effective_limit
                 }
             
-            print(f"  → Running Apify actor ({self.actor_id})...")
+            print(f"     → Running Apify actor ({self.actor_id})...")
             if 'supreme_coder' in self.actor_id:
-                print(f"     • No cookies required ✓")
-                print(f"     • Max posts: {self.max_posts_per_keyword}")
+                print(f"        • No cookies required ✓")
             else:
-                print(f"     • Cookie: {'✓ Provided' if self.linkedin_cookie else '✗ Missing'}")
-                print(f"     • Proxy: {'✓ Configured' if self.proxy_config else '✓ Using Apify proxy'}")
-            print(f"     • Posts: {self.scrape_posts}, Articles: {self.scrape_articles}, Discussions: {self.scrape_discussions}")
+                print(f"        • Using LinkedIn authentication")
+            print(f"        • Fetching up to {effective_limit} posts")
             
             # Run Apify actor (blocking call, wrap in thread)
             run = await asyncio.to_thread(
@@ -213,7 +327,7 @@ class LinkedInApifyScraper(BaseScraper):
             )
             
             # Fetch results from dataset
-            print(f"  → Fetching results from dataset...")
+            print(f"     → Fetching results from dataset...")
             dataset_items = await asyncio.to_thread(
                 self.client.dataset(run['defaultDatasetId']).list_items
             )
@@ -224,11 +338,12 @@ class LinkedInApifyScraper(BaseScraper):
             elif isinstance(dataset_items, dict):
                 items = dataset_items.get('items', [])
             else:
-                items = []
+                items = dataset_items
             
-            print(f"  → Found {len(items)} items from Apify")
+            print(f"     → Found {len(items)} raw items from Apify")
             
             # Parse each item
+            job_filtered = 0
             for item in items:
                 try:
                     # Filter by content type
@@ -251,17 +366,24 @@ class LinkedInApifyScraper(BaseScraper):
                     
                     lead = self._create_lead_from_apify_item(item, keyword)
                     if lead:
-                        # Filter out job postings
+                        # CRITICAL FILTER: Remove job postings
                         if not self._is_job_posting(lead.content):
+                            # Classify service type
+                            service_types = self._classify_service_type(lead.content + " " + (lead.title or ""))
+                            lead.metadata['service_types'] = service_types
+                            lead.metadata['service_inquiry'] = True  # Mark as service inquiry
+                            
                             leads.append(lead)
                         else:
-                            print(f"    → Filtered job posting: {lead.title[:50] if lead.title else 'N/A'}...")
+                            job_filtered += 1
                 except Exception as e:
-                    print(f"    ⚠️  Error parsing item: {e}")
                     continue
+            
+            if job_filtered > 0:
+                print(f"     → Filtered out {job_filtered} job postings")
         
         except Exception as e:
-            print(f"  ⚠️  Apify API error for '{keyword}': {e}")
+            print(f"     ⚠️  Apify API error: {e}")
             return []
         
         return leads
@@ -323,7 +445,7 @@ class LinkedInApifyScraper(BaseScraper):
                 'author_profile': item.get('authorProfileUrl'),
                 'comment_count': item.get('commentsCount', 0),
                 'via_apify': True,
-                'actor': 'apify/linkedin-posts-scraper'
+                'actor': self.actor_id
             }
             
             return Lead(
