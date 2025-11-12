@@ -47,11 +47,14 @@ class LLMLeadQualifier:
                 metadata_summary = f"\nPre-classified categories: {', '.join(service_types)}"
         
         prompt = f"""You are an expert sales lead qualifier for a technology services company that specializes in:
-1. RWA (Real World Asset) Tokenization - tokenizing physical assets on blockchain
-2. Crypto/Blockchain Development - DeFi, Web3, smart contracts, crypto integrations
-3. AI/ML Services - AI automation, machine learning, chatbots, neural networks
 
-Analyze the following lead and determine if they are a POTENTIAL CLIENT actively looking for services (not just discussing or sharing news).
+**OUR SERVICES:**
+1. **RWA Tokenization** - Tokenizing real-world assets (real estate, commodities, art) on blockchain
+2. **Crypto/Web3 Development** - DeFi platforms, Web3 apps, smart contracts, crypto payment integration
+3. **Blockchain Solutions** - Custom blockchain development, distributed ledger systems, consensus protocols
+4. **AI/ML Integration** - AI automation, machine learning models, chatbots, neural networks, predictive analytics
+
+**YOUR TASK:** Analyze this lead and determine if they are a POTENTIAL CLIENT actively seeking our services.
 
 **Lead Information:**
 - Source: {source}
@@ -62,30 +65,50 @@ Analyze the following lead and determine if they are a POTENTIAL CLIENT actively
 **Content:**
 {content}
 
-**Analysis Instructions:**
-1. Determine if this person/company is actively LOOKING FOR HELP/SERVICES (not just discussing, sharing news, or hiring employees)
-2. Identify which services they might need: RWA, Crypto/Blockchain, AI/ML, or None
-3. Assess confidence level (0.0 to 1.0) based on clarity of intent
-4. Provide a brief reason for your decision
+**QUALIFICATION CRITERIA:**
 
-**Key Indicators of a QUALIFIED lead:**
-- Uses phrases like "need help with", "looking for", "seeking consultant", "recommend a solution"
-- Describes a problem they want solved
-- Asks for recommendations or solutions
-- Expresses pain points or challenges
+**HIGH CONFIDENCE (0.8-1.0) - QUALIFIED:**
+- Uses explicit help-seeking phrases:
+  • "need help with/implementing/building"
+  • "looking for consultant/developer/expert"
+  • "recommend a solution/platform/service"
+  • "struggling with/can't figure out"
+  • "seeking expert in/looking to hire"
+  • "any suggestions for/best tool for"
+- Describes a specific problem they want solved
+- Asks direct questions about implementation/solutions
+- Expresses urgency or pain points needing resolution
 
-**NOT qualified leads:**
-- Job postings (hiring employees)
-- General news or information sharing
-- Casual discussions without clear service intent
-- Self-promotion or marketing posts
+**MODERATE CONFIDENCE (0.5-0.7) - POTENTIALLY QUALIFIED:**
+- Discusses challenges but doesn't explicitly ask for help
+- Mentions exploring solutions or considering options
+- Asks general "how to" questions that could lead to service needs
+- Shows interest in learning about implementation approaches
+
+**LOW CONFIDENCE (0.0-0.4) - NOT QUALIFIED:**
+- Job postings: "hiring", "looking for full-time", "open position", "career opportunity"
+- News/updates: "just launched", "announcing", "proud to share", "check out this article"
+- General discussion: "what do you think about", "interesting topic", casual opinions
+- Self-promotion: marketing their own products/services
+- Educational content: explaining concepts without seeking help
+
+**SERVICE MATCHING:**
+- **RWA Tokenization**: mentions tokenizing assets, real estate on blockchain, asset-backed tokens
+- **Crypto/Web3**: DeFi, Web3, smart contracts, crypto integration, wallet, blockchain payments
+- **Blockchain Solutions**: distributed ledger, consensus, blockchain architecture, custom chains
+- **AI/ML**: AI automation, machine learning, chatbots, neural networks, ML models, predictive analytics
+
+**CRITICAL DISTINCTIONS:**
+1. **ASKING FOR HELP** (qualified) vs **JUST DISCUSSING** (not qualified)
+2. **SERVICE INQUIRY** (qualified) vs **JOB POSTING** (not qualified)
+3. **PROBLEM TO SOLVE** (qualified) vs **SHARING KNOWLEDGE** (not qualified)
 
 **Response Format (JSON only, no markdown):**
 {{
   "is_qualified": true/false,
   "confidence_score": 0.0-1.0,
-  "reason": "Brief explanation of decision (1-2 sentences)",
-  "service_match": ["RWA", "Crypto/Blockchain", "AI/ML"] or []
+  "reason": "Brief explanation referencing specific phrases or patterns found (1-2 sentences)",
+  "service_match": ["RWA Tokenization", "Crypto/Web3", "Blockchain Solutions", "AI/ML"] or []
 }}"""
         
         return prompt
