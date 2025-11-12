@@ -100,7 +100,7 @@ class ScrapingConfig:
     max_results_per_source: int = 100
     scrape_interval_seconds: int = 300  # 5 minutes
     enable_sentiment_filter: bool = True
-    min_engagement_score: int = 1  # minimum upvotes/reactions
+    min_engagement_score: int = 0  # minimum upvotes/reactions (0 = allow posts with no engagement)
 
 
 @dataclass
