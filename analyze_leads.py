@@ -1,5 +1,5 @@
 """
-Analyze scraped leads - show service classification and job posting detection.
+Analyze scraped leads - show service classification.
 Run this to see what types of leads you're getting.
 """
 
@@ -48,13 +48,6 @@ SERVICE_CATEGORIES = {
     ]
 }
 
-# Job posting keywords (expanded)
-JOB_KEYWORDS = [
-    'hiring', 'looking for a', 'looking for an', 'apply', 'cv', 'resume',
-    'join our team', 'years experience', 'open to work', 'candidate',
-    'recruitment', 'full-time', 'part-time', 'salary', 'compensation'
-]
-
 def classify_service(text):
     """Classify lead by service type."""
     text_lower = text.lower()
@@ -65,11 +58,6 @@ def classify_service(text):
             categories.append(category)
     
     return categories if categories else ['General']
-
-def is_job_posting(text):
-    """Check if lead is a job posting."""
-    text_lower = text.lower()
-    return any(kw in text_lower for kw in JOB_KEYWORDS)
 
 # Analyze leads
 print("=" * 80)
@@ -86,19 +74,10 @@ print(f"  • Total Leads: {total_leads}")
 print(f"  • LinkedIn: {len(linkedin_leads)}")
 print(f"  • Reddit: {len(reddit_leads)}")
 
-# Job posting analysis
-job_postings = [l for l in linkedin_leads if is_job_posting(l['content'])]
-service_leads = [l for l in linkedin_leads if not is_job_posting(l['content'])]
-
-print(f"\n🎯 JOB POSTING FILTER ANALYSIS (LinkedIn only):")
-print(f"  • Total LinkedIn Leads: {len(linkedin_leads)}")
-print(f"  • Likely Job Postings: {len(job_postings)} ({len(job_postings)/len(linkedin_leads)*100:.1f}%)")
-print(f"  • Potential Service Inquiries: {len(service_leads)} ({len(service_leads)/len(linkedin_leads)*100:.1f}%)")
-
 # Service classification
 print(f"\n🏷️  SERVICE TYPE CLASSIFICATION:")
 service_counter = Counter()
-for lead in service_leads:
+for lead in linkedin_leads:
     categories = classify_service(lead['content'] + " " + (lead.get('title') or ''))
     for cat in categories:
         service_counter[cat] += 1
@@ -106,24 +85,18 @@ for lead in service_leads:
 for service_type, count in service_counter.most_common():
     print(f"  • {service_type}: {count} leads")
 
-# Sample good leads
-print(f"\n✅ SAMPLE SERVICE INQUIRY LEADS (Non-Job Postings):")
-for i, lead in enumerate(service_leads[:5], 1):
-    categories = classify_service(lead['content'] + " " + (lead.get('title') or ''))
-    service_tag = ", ".join(categories)
-    title = lead.get('title', 'No title')[:60]
-    print(f"\n  {i}. [{service_tag}] {title}...")
-    print(f"     Author: {lead['author']}")
-    print(f"     Preview: {lead['content'][:100]}...")
-
-# Sample job postings
-print(f"\n❌ SAMPLE JOB POSTINGS (Should be filtered out):")
-for i, lead in enumerate(job_postings[:5], 1):
-    title = lead.get('title', 'No title')[:60]
-    print(f"\n  {i}. {title}...")
-    print(f"     Author: {lead['author']}")
-    print(f"     Preview: {lead['content'][:100]}...")
+# Sample leads by category
+print(f"\n✅ SAMPLE LEADS BY CATEGORY:")
+for category in ['RWA', 'Crypto', 'Blockchain', 'AI/ML', 'Fintech']:
+    category_leads = [l for l in linkedin_leads if category in classify_service(l['content'] + " " + (l.get('title') or ''))]
+    if category_leads:
+        print(f"\n[{category}] - {len(category_leads)} leads")
+        sample = category_leads[0]
+        title = (sample.get('title') or 'No title')[:60]
+        print(f"  Sample: {title}")
+        print(f"  Author: {sample['author']}")
+        print(f"  Preview: {sample['content'][:100]}...")
 
 print("\n" + "=" * 80)
-print(f"💡 RECOMMENDATION: {len(job_postings)} leads need to be filtered out")
+print(f"✅ Analysis complete: {len(linkedin_leads)} LinkedIn leads analyzed")
 print("=" * 80)
