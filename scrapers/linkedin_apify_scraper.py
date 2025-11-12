@@ -177,6 +177,7 @@ class LinkedInApifyScraper(BaseScraper):
     async def scrape(self) -> list[Lead]:
         """Scrape LinkedIn posts via Apify for all keywords with global rate limit."""
         all_leads: list[Lead] = []
+        seen_urls = set()  # Track URLs to avoid duplicates
         
         print(f"🔍 Starting LinkedIn scraping via Apify")
         print(f"   • Max posts per keyword: {self.max_posts_per_keyword}")
@@ -202,8 +203,24 @@ class LinkedInApifyScraper(BaseScraper):
                 
                 print(f"\n  [{idx}/{len(self.keywords)}] Keyword: '{keyword}' (budget: {posts_to_fetch} posts)")
                 leads = await self._scrape_keyword(keyword, posts_to_fetch)
-                all_leads.extend(leads)
-                print(f"  ✓ Extracted {len(leads)} service leads | Total: {len(all_leads)}/{self.max_total_leads}")
+                
+                # Add service classification and filter duplicates
+                unique_leads = []
+                for lead in leads:
+                    if lead.url not in seen_urls:
+                        service_types = self._classify_service_type(lead.content + " " + (lead.title or ""))
+                        lead.metadata['service_types'] = service_types
+                        lead.metadata['service_inquiry'] = True
+                        
+                        unique_leads.append(lead)
+                        seen_urls.add(lead.url)
+                
+                all_leads.extend(unique_leads)
+                duplicates = len(leads) - len(unique_leads)
+                if duplicates > 0:
+                    print(f"  ✓ Extracted {len(unique_leads)} service leads ({duplicates} duplicates removed) | Total: {len(all_leads)}/{self.max_total_leads}")
+                else:
+                    print(f"  ✓ Extracted {len(unique_leads)} service leads | Total: {len(all_leads)}/{self.max_total_leads}")
             except Exception as e:
                 print(f"  ✗ Error scraping '{keyword}': {e}")
         
@@ -230,6 +247,12 @@ class LinkedInApifyScraper(BaseScraper):
                     'urls': [search_url],
                     'limit': effective_limit
                 }
+            elif 'apify/linkedin-posts-scraper' in self.actor_id:
+                # apify/linkedin-posts-scraper - different input format
+                run_input = {
+                    'searchUrls': [search_url],
+                    'maxPosts': effective_limit
+                }
             elif 'curious_coder' in self.actor_id:
                 # curious_coder actor - requires cookies
                 run_input = {
@@ -255,7 +278,7 @@ class LinkedInApifyScraper(BaseScraper):
                 }
             
             print(f"     → Running Apify actor ({self.actor_id})...")
-            if 'supreme_coder' in self.actor_id:
+            if 'supreme_coder' in self.actor_id or 'apify/linkedin-posts-scraper' in self.actor_id:
                 print(f"        • No cookies required ✓")
             else:
                 print(f"        • Using LinkedIn authentication")
@@ -306,11 +329,6 @@ class LinkedInApifyScraper(BaseScraper):
                     
                     lead = self._create_lead_from_apify_item(item, keyword)
                     if lead:
-                        # Classify service type
-                        service_types = self._classify_service_type(lead.content + " " + (lead.title or ""))
-                        lead.metadata['service_types'] = service_types
-                        lead.metadata['service_inquiry'] = True  # Mark as service inquiry
-                        
                         leads.append(lead)
                 except Exception as e:
                     continue
