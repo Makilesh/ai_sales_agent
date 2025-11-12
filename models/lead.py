@@ -21,6 +21,7 @@ class Lead:
     engagement_score: int = 0  # upvotes, reactions, etc.
     channel_name: str | None = None
     subreddit: str | None = None
+    linkedin_post_type: str | None = None  # 'post', 'article', 'video', 'comment'
     
     def __post_init__(self) -> None:
         """Validate lead data after initialization."""
@@ -31,7 +32,7 @@ class Lead:
         if not self.source:
             raise ValueError("Source cannot be empty")
         
-        if self.source not in {'reddit', 'discord', 'slack'}:
+        if self.source not in {'reddit', 'discord', 'slack', 'linkedin', 'linkedin_public'}:
             raise ValueError(f"Invalid source: {self.source}")
         
         if not self.author or not self.author.strip():
