@@ -48,12 +48,6 @@ class LinkedInPublicScraper(BaseScraper):
         'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
     ]
     
-    JOB_POSTING_KEYWORDS = [
-        'hiring', 'job opening', "we're hiring", 'join our team',
-        'now hiring', 'careers', 'job opportunity', 'apply now',
-        'seeking candidates', 'vacancy', 'position available'
-    ]
-    
     def __init__(
         self,
         keywords: list[str],
@@ -83,14 +77,6 @@ class LinkedInPublicScraper(BaseScraper):
             'Sec-Fetch-Site': 'none',
             'Cache-Control': 'max-age=0'
         }
-    
-    def _is_job_posting(self, text: str) -> bool:
-        """Check if content appears to be a job posting."""
-        if not text:
-            return False
-        
-        text_lower = text.lower()
-        return any(keyword in text_lower for keyword in self.JOB_POSTING_KEYWORDS)
     
     def _is_blocked_response(self, response: requests.Response) -> bool:
         """Check if LinkedIn blocked the request."""
@@ -198,11 +184,7 @@ class LinkedInPublicScraper(BaseScraper):
                 try:
                     lead = self._parse_search_result(card, keyword, index)
                     if lead:
-                        # Filter out job postings
-                        if not self._is_job_posting(lead.content):
-                            leads.append(lead)
-                        else:
-                            print(f"  → Filtered job posting: {lead.title[:50]}...")
+                        leads.append(lead)
                 except Exception as e:
                     print(f"  ⚠️  Error parsing result {index}: {e}")
                     continue
