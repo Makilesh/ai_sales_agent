@@ -15,7 +15,7 @@ class RedditConfig:
         # "artificial",
         # "ArtificialIntelligence",
         "rwa"
-        
+        "ArtificialIntelligence"
         # "smallbusiness",
         # "SaaS"
     ])
@@ -48,6 +48,28 @@ class SlackConfig:
 
 
 @dataclass
+class LinkedInPublicConfig:
+    """EXPERIMENTAL: LinkedIn public scraping (no login, high ban risk)."""
+    enabled: bool = config("LINKEDIN_PUBLIC_ENABLED", default=False, cast=bool)
+    rate_limit: int = 2  # requests per minute (NEVER increase)
+    max_results_per_keyword: int = 10  # Single page only
+    max_daily_requests: int = 20  # Hard daily limit
+    delay_min_seconds: float = 8.0
+    delay_max_seconds: float = 15.0
+
+
+@dataclass
+class LinkedInApifyConfig:
+    """LinkedIn scraping via Apify API (production-ready, no account risk)."""
+    enabled: bool = config("LINKEDIN_APIFY_ENABLED", default=False, cast=bool)
+    apify_token: str = config("APIFY_TOKEN", default="")
+    actor_id: str = "apify/linkedin-posts-scraper"
+    max_posts_per_keyword: int = 50
+    rate_limit: int = 10  # Apify API calls per minute
+    scrape_comments: bool = True
+
+
+@dataclass
 class ScrapingConfig:
     """General scraping parameters."""
     keywords: list[str] = field(default_factory=lambda: [
@@ -72,6 +94,8 @@ class AppSettings:
     reddit: RedditConfig = field(default_factory=RedditConfig)
     discord: DiscordConfig = field(default_factory=DiscordConfig)
     slack: SlackConfig = field(default_factory=SlackConfig)
+    linkedin_public: LinkedInPublicConfig = field(default_factory=LinkedInPublicConfig)
+    linkedin_apify: LinkedInApifyConfig = field(default_factory=LinkedInApifyConfig)
     scraping: ScrapingConfig = field(default_factory=ScrapingConfig)
     debug_mode: bool = config("DEBUG", default=False, cast=bool)
     log_level: str = config("LOG_LEVEL", default="INFO")
@@ -88,6 +112,10 @@ class AppSettings:
         if not self.slack.bot_token or not self.slack.app_token:
             print("Warning: Slack credentials not configured")
             valid = False
+        if self.linkedin_public.enabled:
+            print("⚠️  LinkedIn Public: EXPERIMENTAL - High ban risk. Consider Apify for production.")
+        if self.linkedin_apify.enabled and not self.linkedin_apify.apify_token:
+            print("Warning: LinkedIn Apify enabled but token not configured")
         return valid
 
 
