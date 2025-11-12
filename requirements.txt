@@ -15,3 +15,15 @@ aiohttp==3.9.3
 
 # Environment variable management
 python-decouple==3.8
+
+# LinkedIn Public Scraping (EXPERIMENTAL - for testing only)
+# Used by linkedin_public_scraper.py for no-login HTML parsing
+# High ban risk - use only for small-scale testing
+requests>=2.32.0
+beautifulsoup4>=4.12.3
+lxml>=5.3.0
+
+# LinkedIn Apify Scraping (PRODUCTION - recommended)
+# Used by linkedin_apify_scraper.py for professional API integration
+# No account risk - reliable data extraction via Apify service
+apify-client>=1.7.0
