@@ -205,6 +205,13 @@ class AppSettings:
     linkedin_public: LinkedInPublicConfig = field(default_factory=LinkedInPublicConfig)
     linkedin_apify: LinkedInApifyConfig = field(default_factory=LinkedInApifyConfig)
     scraping: ScrapingConfig = field(default_factory=ScrapingConfig)
+    
+    # LLM Qualification Settings
+    openai_api_key: str = config("OPENAI_API_KEY", default="")
+    llm_model: str = "gpt-4-turbo"
+    min_confidence_score: float = 0.7
+    max_concurrent_llm_requests: int = 5
+    
     debug_mode: bool = config("DEBUG", default=False, cast=bool)
     log_level: str = config("LOG_LEVEL", default="INFO")
 
