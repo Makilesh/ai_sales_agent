@@ -13,7 +13,9 @@ from scrapers.slack_scraper import SlackScraper
 from scrapers.linkedin_public_scraper import LinkedInPublicScraper
 from scrapers.linkedin_apify_scraper import LinkedInApifyScraper
 from storage.json_handler import append_leads, save_leads
+from storage.excel_handler import export_to_excel
 from utils.linkedin_helpers import get_linkedin_user_agents
+from utils.llm_handler import qualify_leads_batch
 
 
 # Module-level counter for LinkedIn public scraper daily limit
@@ -276,6 +278,48 @@ def main():
         # Save results
         print(f"\nSaving leads to {args.output}...")
         append_leads(leads, args.output)
+        
+        # Ask user about LLM qualification
+        print("\n" + "=" * 60)
+        llm_choice = input("Qualify leads with LLM? (y/n): ").strip().lower()
+        
+        if llm_choice == 'y':
+            try:
+                print("\n🤖 Starting LLM qualification...")
+                qualifications = qualify_leads_batch(leads)
+                
+                # Filter to only qualified leads
+                qualified_results = [
+                    (lead, qual) 
+                    for lead, qual in zip(leads, qualifications)
+                    if qual.get('is_qualified', False)
+                ]
+                
+                if qualified_results:
+                    qualified_leads, qualified_quals = zip(*qualified_results)
+                    
+                    # Calculate qualification rate
+                    total_leads = len(leads)
+                    qualified_count = len(qualified_leads)
+                    qualification_rate = (qualified_count / total_leads * 100) if total_leads > 0 else 0
+                    
+                    # Export to Excel
+                    excel_output = "data/qualified_leads.xlsx"
+                    print(f"\n📊 Exporting qualified leads to {excel_output}...")
+                    export_to_excel(list(qualified_leads), list(qualified_quals), excel_output)
+                    
+                    # Print summary
+                    print("\n" + "=" * 60)
+                    print("LLM QUALIFICATION SUMMARY")
+                    print("=" * 60)
+                    print(f"✅ {qualified_count}/{total_leads} leads qualified ({qualification_rate:.1f}% qualification rate)")
+                    print(f"📄 Excel export: {excel_output}")
+                else:
+                    print("\n⚠️  No leads were qualified by the LLM")
+                    
+            except Exception as e:
+                print(f"\n⚠️  LLM qualification failed: {e}")
+                print("Continuing without LLM qualification...")
         
         print("\n" + "=" * 60)
         print(f"✓ Successfully scraped {len(leads)} leads")
