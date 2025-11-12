@@ -27,3 +27,11 @@ lxml>=5.3.0
 # Used by linkedin_apify_scraper.py for professional API integration
 # No account risk - reliable data extraction via Apify service
 apify-client>=1.7.0
+
+# LLM Lead Qualification
+# Used by llm_handler.py for intelligent lead qualification
+openai>=1.0.0
+
+# Excel Export
+# Used by excel_handler.py for exporting leads to Excel
+openpyxl>=3.1.0
