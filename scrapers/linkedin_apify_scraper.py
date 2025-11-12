@@ -306,21 +306,14 @@ class LinkedInApifyScraper(BaseScraper):
                     
                     lead = self._create_lead_from_apify_item(item, keyword)
                     if lead:
-                        # CRITICAL FILTER: Remove job postings
-                        if not self._is_job_posting(lead.content):
-                            # Classify service type
-                            service_types = self._classify_service_type(lead.content + " " + (lead.title or ""))
-                            lead.metadata['service_types'] = service_types
-                            lead.metadata['service_inquiry'] = True  # Mark as service inquiry
-                            
-                            leads.append(lead)
-                        else:
-                            job_filtered += 1
+                        # Classify service type
+                        service_types = self._classify_service_type(lead.content + " " + (lead.title or ""))
+                        lead.metadata['service_types'] = service_types
+                        lead.metadata['service_inquiry'] = True  # Mark as service inquiry
+                        
+                        leads.append(lead)
                 except Exception as e:
                     continue
-            
-            if job_filtered > 0:
-                print(f"     → Filtered out {job_filtered} job postings")
         
         except Exception as e:
             print(f"     ⚠️  Apify API error: {e}")
