@@ -1,14 +1,14 @@
 """
 LinkedIn Scraper via Apify API - SERVICE LEAD DISCOVERY
 
-This scraper finds POTENTIAL CLIENTS asking for services (not job postings).
+This scraper finds POTENTIAL CLIENTS asking for services.
 Focus: People/companies looking for help with RWA, crypto, blockchain, AI, etc.
 
 Features:
-- Comprehensive job posting filter (eliminates ALL hiring posts)
 - Service classification by industry (RWA, crypto, AI, blockchain, etc.)
 - No risk to LinkedIn account (uses Apify infrastructure)
 - Handles authentication, rate limiting, and anti-bot measures
+- Global lead limit to control costs
 
 Setup:
 1. Create free account at https://apify.com
@@ -31,51 +31,7 @@ from scrapers.base import BaseScraper
 
 
 class LinkedInApifyScraper(BaseScraper):
-    """Professional LinkedIn scraper for finding SERVICE INQUIRIES (not job postings)."""
-    
-    # ===================================================================
-    # COMPREHENSIVE JOB POSTING FILTER - Eliminates ALL hiring content
-    # ===================================================================
-    JOB_POSTING_KEYWORDS = [
-        # Direct hiring language
-        'hiring', 'job opening', "we're hiring", "we are hiring", 'join our team',
-        'apply now', 'career opportunity', 'now hiring', 'careers', 'open position',
-        'job opportunity', 'seeking candidates', 'vacancy', 'position available',
-        
-        # "Looking for" in hiring context
-        'looking for a', 'looking for an', 'looking for:', 
-        'we are looking for', "we're looking for", 'our team is looking for',
-        'currently looking for', 'actively looking for',
-        
-        # Application/CV language
-        'send your cv', 'send cv', 'submit your cv', 'submit cv', 
-        'apply below', 'apply here', 'drop your cv', 'share your cv',
-        'send resume', 'submit resume', 'apply at', 'applications open',
-        
-        # Open to work (people looking for jobs - NOT our clients)
-        'open to work', 'opentowork', '#opentowork', 'seeking opportunities',
-        'looking for opportunities', 'available for work', 'job search',
-        'actively seeking', 'ready to join', 'exploring opportunities',
-        
-        # Recruitment language
-        'candidate', 'candidates wanted', 'recruitment', 'recruiter', 'recruiting',
-        'talent acquisition', 'hr is hiring', 'join us', 'join our', 'become part of',
-        
-        # Job details indicators
-        'full-time', 'full time', 'part-time', 'part time', 'contract role',
-        'remote position', 'on-site position', 'hybrid position', 'hybrid role',
-        'salary:', 'compensation:', 'benefits:', 'ctc:', 'package:',
-        'years experience', 'years of experience', 'yrs exp', '+ years',
-        
-        # Job titles in hiring context (strong indicators)
-        'software engineer to join', 'developer to join', 'designer to join',
-        'manager to join', 'analyst to join', 'consultant to join',
-        'role at', 'position at', 'opening at', 'opportunity at',
-        
-        # Resume/profile posting
-        'my resume', 'my cv', 'here is my', 'check out my resume',
-        'download my cv', 'view my profile'
-    ]
+    """Professional LinkedIn scraper for finding SERVICE INQUIRIES."""
     
     # ===================================================================
     # SERVICE TYPE CLASSIFICATION - Tag leads by industry/service type
@@ -141,7 +97,7 @@ class LinkedInApifyScraper(BaseScraper):
         
         Args:
             apify_token: Apify API token
-            keywords: Search keywords for LinkedIn posts (SERVICE-FOCUSED, not job-related)
+            keywords: Search keywords for LinkedIn posts (SERVICE-FOCUSED)
             max_posts_per_keyword: Maximum posts to fetch per keyword
             rate_limit: API requests per minute
             actor_id: Apify actor ID to use
@@ -200,21 +156,6 @@ class LinkedInApifyScraper(BaseScraper):
         
         return True
     
-    def _is_job_posting(self, text: str) -> bool:
-        """
-        Check if content is a job posting or hiring-related post.
-        
-        Returns True if it's a job post (should be filtered out).
-        Returns False if it's a potential service inquiry (keep it).
-        """
-        if not text:
-            return False
-        
-        text_lower = text.lower()
-        
-        # Check for job posting keywords
-        return any(keyword in text_lower for keyword in self.JOB_POSTING_KEYWORDS)
-    
     def _classify_service_type(self, text: str) -> list[str]:
         """
         Classify lead by service category (RWA, Crypto, AI, etc.).
@@ -241,7 +182,7 @@ class LinkedInApifyScraper(BaseScraper):
         print(f"   • Max posts per keyword: {self.max_posts_per_keyword}")
         print(f"   • Global lead limit: {self.max_total_leads}")
         print(f"   • Keywords to search: {len(self.keywords)}")
-        print(f"🎯 Focus: SERVICE INQUIRIES (filtering out ALL job postings)")
+        print(f"🎯 Focus: SERVICE INQUIRIES")
         
         for idx, keyword in enumerate(self.keywords, 1):
             # Check global limit BEFORE scraping each keyword
@@ -343,7 +284,6 @@ class LinkedInApifyScraper(BaseScraper):
             print(f"     → Found {len(items)} raw items from Apify")
             
             # Parse each item
-            job_filtered = 0
             for item in items:
                 try:
                     # Filter by content type
@@ -477,6 +417,6 @@ class LinkedInApifyScraper(BaseScraper):
             f"LinkedInApifyScraper("
             f"keywords={len(self.keywords)}, "
             f"max_posts={self.max_posts_per_keyword}, "
-            f"types={'+'.join(content_types)}, "
+            f"max_total={self.max_total_leads}, "
             f"actor={self.actor_id})"
         )
