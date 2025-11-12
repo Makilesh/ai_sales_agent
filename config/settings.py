@@ -63,10 +63,25 @@ class LinkedInApifyConfig:
     """LinkedIn scraping via Apify API (production-ready, no account risk)."""
     enabled: bool = config("LINKEDIN_APIFY_ENABLED", default=False, cast=bool)
     apify_token: str = config("APIFY_TOKEN", default="")
-    actor_id: str = "apify/linkedin-posts-scraper"
+    actor_id: str = config("LINKEDIN_APIFY_ACTOR", default="curious_coder/linkedin-post-search-scraper")
     max_posts_per_keyword: int = 50
     rate_limit: int = 10  # Apify API calls per minute
-    scrape_comments: bool = True
+    
+    # LinkedIn authentication (required by some actors)
+    linkedin_cookie: str = config("LINKEDIN_COOKIE", default="")  # li_at cookie value
+    proxy_config: str = config("LINKEDIN_PROXY", default="")  # Optional proxy URL
+    
+    # Content type configuration
+    scrape_posts: bool = True  # Regular LinkedIn posts
+    scrape_articles: bool = True  # LinkedIn articles
+    scrape_discussions: bool = True  # Discussion threads
+    scrape_comments: bool = True  # Post comments
+    scrape_reactions: bool = True  # Like/reaction data
+    
+    # Filtering options
+    only_posts: bool = True  # Exclude company updates/ads
+    include_sponsored: bool = False  # Include sponsored content
+    min_reactions: int = 0  # Minimum reactions to consider
 
 
 @dataclass
