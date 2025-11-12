@@ -138,7 +138,8 @@ async def scrape_linkedin_apify() -> list[Lead]:
             scrape_reactions=settings.linkedin_apify.scrape_reactions,
             only_posts=settings.linkedin_apify.only_posts,
             include_sponsored=settings.linkedin_apify.include_sponsored,
-            min_reactions=settings.linkedin_apify.min_reactions
+            min_reactions=settings.linkedin_apify.min_reactions,
+            max_total_leads=settings.scraping.max_total_leads  # Pass global limit
         )
         leads = await scraper.scrape_with_rate_limit()
         print(f"✓ LinkedIn Apify: Found {len(leads)} leads")
@@ -208,6 +209,17 @@ def main():
         help='Sources to scrape (default: reddit, discord, slack)'
     )
     parser.add_argument(
+        '--service',
+        type=str,
+        choices=['rwa', 'crypto', 'ai', 'blockchain', 'general', 'all'],
+        help='Service type keyword preset (rwa=6 kw, crypto=6 kw, all=27 kw). Overrides default.'
+    )
+    parser.add_argument(
+        '--max-total-leads',
+        type=int,
+        help='Global limit - stop after this many leads (default: 200)'
+    )
+    parser.add_argument(
         '--output',
         type=str,
         default='data/leads.json',
@@ -221,12 +233,28 @@ def main():
     
     args = parser.parse_args()
     
+    # Apply service preset if specified
+    if args.service:
+        preset_keywords = settings.scraping.KEYWORD_PRESETS.get(args.service, [])
+        if preset_keywords:
+            settings.scraping.keywords = preset_keywords
+            print(f"🎯 Using '{args.service}' keyword preset ({len(preset_keywords)} keywords)")
+        else:
+            print(f"⚠️  Service preset '{args.service}' not found, using default keywords")
+    
+    # Apply global limit if specified
+    if args.max_total_leads:
+        settings.scraping.max_total_leads = args.max_total_leads
+    
     print("=" * 60)
     print("Multi-Source Lead Scraping Engine - Phase 1")
     print("=" * 60)
     print(f"Timestamp: {datetime.now().isoformat()}")
     print(f"Sources: {', '.join(args.sources)}")
     print(f"Keywords: {len(settings.scraping.keywords)}")
+    if args.service:
+        print(f"Service Type: {args.service.upper()}")
+    print(f"Max Total Leads: {settings.scraping.max_total_leads}")
     print(f"Output: {args.output}")
     
     # Validate settings
