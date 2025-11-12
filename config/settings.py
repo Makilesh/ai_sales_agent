@@ -86,18 +86,111 @@ class LinkedInApifyConfig:
 
 @dataclass
 class ScrapingConfig:
-    """General scraping parameters."""
+    """General scraping parameters - SERVICE INQUIRY FOCUSED."""
+    
+    # ===================================================================
+    # SERVICE-BASED KEYWORD PRESETS - For efficient, targeted scraping
+    # ===================================================================
+    # Use --service flag to select which preset to use
+    # Example: python main.py --sources linkedin_apify --service rwa
+    
+    KEYWORD_PRESETS = {
+        'rwa': [
+            # RWA-specific keywords (3 keywords = 87% credit savings vs 'all')
+            "tokenize real estate",
+            "rwa tokenization", 
+            "asset tokenization",
+            "real world asset blockchain",
+            "tokenizing physical assets",
+            "rwa platform recommendation"
+        ],
+        'crypto': [
+            # Crypto/Web3 keywords
+            "crypto integration",
+            "web3 development", 
+            "smart contract help",
+            "blockchain solution",
+            "defi platform recommendation",
+            "cryptocurrency payment gateway"
+        ],
+        'ai': [
+            # AI/ML keywords
+            "ai automation solution",
+            "machine learning consultant",
+            "chatbot development service",
+            "ai integration help",
+            "ml model deployment"
+        ],
+        'blockchain': [
+            # General blockchain keywords
+            "blockchain consultant",
+            "distributed ledger solution",
+            "blockchain integration",
+            "smart contract audit"
+        ],
+        'general': [
+            # High-intent service requests (any industry)
+            "recommend a tool for",
+            "recommend a service for",
+            "best solution for",
+            "need help with",
+            "looking to outsource",
+            "want to outsource",
+            "need consultant for",
+            "seeking expert in",
+            "looking for agency",
+            "struggling with",
+            "how to automate"
+        ],
+        'all': [
+            # ALL keywords - use only when you need comprehensive coverage
+            # WARNING: Uses most credits (24 keywords)
+            "recommend a tool for",
+            "recommend a service for",
+            "best solution for",
+            "need help with",
+            "any tips for",
+            "how do I",
+            "help me with",
+            "looking to outsource",
+            "want to outsource",
+            "need to outsource",
+            "looking for consultant",
+            "need consultant for",
+            "seeking expert in",
+            "looking for agency",
+            "struggling with",
+            "frustrated by",
+            "how to automate",
+            "reduce costs on",
+            "improve our",
+            "scale our",
+            "tokenize real estate",
+            "rwa tokenization",
+            "asset tokenization",
+            "crypto integration",
+            "web3 development",
+            "smart contract help",
+            "blockchain solution"
+        ]
+    }
+    
+    # Default keywords (used if --service not specified)
     keywords: list[str] = field(default_factory=lambda: [
-        "looking for",
-        "need help",
-        "recommendation",
-        "suggestions",
-        # "hiring",
-        "outsource",
-        "consultant",
-        "agency"
+        # Default: RWA-focused (most efficient for your use case)
+        "tokenize real estate",
+        "rwa tokenization",
+        "asset tokenization",
+        
+        # # Crypto-specific
+        # "crypto integration",
+        # "web3 development",
+        # "smart contract help",
+        # "blockchain solution"
     ])
+    
     max_results_per_source: int = 100
+    max_total_leads: int = 200  # Global limit - stops scraping after this many total leads
     scrape_interval_seconds: int = 300  # 5 minutes
     enable_sentiment_filter: bool = True
     min_engagement_score: int = 0  # minimum upvotes/reactions (0 = allow posts with no engagement)
