@@ -184,6 +184,7 @@ class LinkedInApifyScraper(BaseScraper):
         print(f"   • Global lead limit: {self.max_total_leads}")
         print(f"   • Keywords to search: {len(self.keywords)}")
         print(f"🎯 Focus: SERVICE INQUIRIES")
+        print("   Looking for: People explicitly asking for our services (not just discussing topics)")
         
         for idx, keyword in enumerate(self.keywords, 1):
             # Check global limit BEFORE scraping each keyword
