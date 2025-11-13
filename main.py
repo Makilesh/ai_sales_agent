@@ -115,7 +115,7 @@ async def scrape_linkedin_public() -> list[Lead]:
 
 
 async def scrape_linkedin_apify() -> list[Lead]:
-    """Scrape LinkedIn via Apify API (Phase 1.1 - Production-ready lead discovery)."""
+    """Scrape LinkedIn for people explicitly ASKING for our services (consultants, solutions, platforms)."""
     if not settings.linkedin_apify.enabled:
         return []
     
@@ -214,7 +214,7 @@ def main():
         '--service',
         type=str,
         choices=['rwa', 'crypto', 'ai', 'blockchain', 'general', 'all'],
-        help='Service type keyword preset (rwa=6 kw, crypto=6 kw, all=27 kw). Overrides default.'
+        help='Service inquiry type (rwa, crypto, ai, blockchain, general, all). Uses keywords where people are ASKING for that service.'
     )
     parser.add_argument(
         '--max-total-leads',
@@ -241,7 +241,7 @@ def main():
         '--filter-service',
         type=str,
         choices=['RWA', 'Crypto', 'AI/ML', 'Blockchain', 'Web3'],
-        help='Filter leads for specific service type (e.g., --filter-service RWA)'
+        help='LLM filter: ONLY qualify leads asking for specific service (RWA, Crypto, AI/ML, Blockchain, Web3)'
     )
     
     args = parser.parse_args()
