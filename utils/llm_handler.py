@@ -1,11 +1,11 @@
 """LLM-based lead qualification using OpenAI GPT-4-turbo."""
 
-import os
 import json
 import asyncio
 from typing import Optional
 from datetime import datetime
 
+from decouple import config
 from openai import OpenAI
 from openai import OpenAIError
 
@@ -15,19 +15,21 @@ from models.lead import Lead
 class LLMLeadQualifier:
     """Qualify leads using GPT-4-turbo for intelligent service matching."""
     
-    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo"):
+    def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo", target_service: Optional[str] = None):
         """
         Initialize LLM qualifier.
         
         Args:
-            api_key: OpenAI API key (defaults to OPENAI_API_KEY env var)
+            api_key: OpenAI API key (defaults to OPENAI_API_KEY from .env)
             model: Model to use (default: gpt-4-turbo)
+            target_service: Specific service to filter for (e.g., 'RWA', 'Crypto', 'AI/ML', 'Blockchain')
         """
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+        self.api_key = api_key or config("OPENAI_API_KEY", default="")
         if not self.api_key:
-            raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY environment variable.")
+            raise ValueError("OpenAI API key not found. Set OPENAI_API_KEY in .env file.")
         
         self.model = model
+        self.target_service = target_service
         self.client = OpenAI(api_key=self.api_key)
     
     def _build_qualification_prompt(self, lead: Lead) -> str:
@@ -46,6 +48,20 @@ class LLMLeadQualifier:
             if service_types:
                 metadata_summary = f"\nPre-classified categories: {', '.join(service_types)}"
         
+        # Service-specific filtering instructions
+        service_focus = ""
+        if self.target_service:
+            service_focus = f"""
+**🎯 TARGET SERVICE FILTER: {self.target_service.upper()}**
+
+CRITICAL: You MUST ONLY qualify leads that are specifically asking for {self.target_service} services.
+- If the lead is asking for {self.target_service} help/services: QUALIFY (confidence 0.7+)
+- If the lead is asking for ANY other service: DO NOT QUALIFY (confidence 0.0-0.3)
+- If unclear whether they need {self.target_service}: LOW confidence (0.4-0.6)
+
+REJECT leads about other services even if they are high-quality service inquiries.
+"""
+        
         prompt = f"""You are an expert sales lead qualifier for a technology services company that specializes in:
 
 **OUR SERVICES:**
@@ -53,6 +69,8 @@ class LLMLeadQualifier:
 2. **Crypto/Web3 Development** - DeFi platforms, Web3 apps, smart contracts, crypto payment integration
 3. **Blockchain Solutions** - Custom blockchain development, distributed ledger systems, consensus protocols
 4. **AI/ML Integration** - AI automation, machine learning models, chatbots, neural networks, predictive analytics
+
+{service_focus}
 
 **YOUR TASK:** Analyze this lead and determine if they are a POTENTIAL CLIENT actively seeking our services.
 
@@ -379,7 +397,8 @@ def qualify_leads_batch(leads: list[Lead], max_leads: Optional[int] = None) -> l
 async def qualify_leads_concurrent(
     leads: list[Lead], 
     max_concurrent: int = 5,
-    max_leads: Optional[int] = None
+    max_leads: Optional[int] = None,
+    target_service: Optional[str] = None
 ) -> list[dict]:
     """
     Qualify multiple leads concurrently using asyncio.
@@ -388,12 +407,13 @@ async def qualify_leads_concurrent(
         leads: List of Lead objects
         max_concurrent: Maximum concurrent API requests (default: 5)
         max_leads: Maximum total leads to process (for cost control)
+        target_service: Filter for specific service (e.g., 'RWA', 'Crypto', 'AI/ML', 'Blockchain')
         
     Returns:
         List of qualification results in same order as input leads
         
     Example:
-        results = await qualify_leads_concurrent(leads, max_concurrent=5, max_leads=20)
+        results = await qualify_leads_concurrent(leads, max_concurrent=5, max_leads=20, target_service='RWA')
     """
-    qualifier = LLMLeadQualifier()
+    qualifier = LLMLeadQualifier(target_service=target_service)
     return await qualifier.qualify_leads_concurrent(leads, max_concurrent, max_leads)
