@@ -57,10 +57,16 @@ class RedditScraper(BaseScraper):
             # Wrap PRAW call in thread executor for true async
             subreddit = await asyncio.to_thread(self.reddit.subreddit, subreddit_name)
             
-            # Scrape hot posts
-            hot_posts = await asyncio.to_thread(lambda: list(subreddit.hot(limit=25)))
+            # Scrape from multiple feeds for variety
+            # Hot posts (current trending)
+            hot_posts = await asyncio.to_thread(lambda: list(subreddit.hot(limit=50)))
+            # New posts (recent activity)
+            new_posts = await asyncio.to_thread(lambda: list(subreddit.new(limit=50)))
             
-            for submission in hot_posts:
+            # Combine and deduplicate
+            all_posts = {post.id: post for post in hot_posts + new_posts}.values()
+            
+            for submission in all_posts:
                 await self._apply_rate_limit()
                 
                 # Check post
@@ -72,7 +78,7 @@ class RedditScraper(BaseScraper):
                     print(f"Error processing post {submission.id}: {e}")
                     continue
                 
-                # Check comments
+                # Check comments (increased from 10 to 20)
                 try:
                     # Apply rate limit before fetching comments
                     await self._apply_rate_limit()
@@ -81,7 +87,7 @@ class RedditScraper(BaseScraper):
                     await self._apply_rate_limit()
                     all_comments = await asyncio.to_thread(submission.comments.list)
                     
-                    for comment in all_comments[:10]:  # First 10 comments
+                    for comment in all_comments[:20]:  # First 20 comments (increased)
                         if isinstance(comment, Comment):
                             comment_lead = self._create_lead_from_comment(
                                 comment, 
