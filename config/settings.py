@@ -107,12 +107,26 @@ class ScrapingConfig:
     KEYWORD_PRESETS = {
         'rwa': [
             # HIGH-INTENT: Someone explicitly seeking RWA service
-            "looking for rwa tokenization",
-            "rwa platform recommendation",
-            "need help tokenizing",
-            "tokenization service for real estate",
+            "looking for rwa tokenization", 
+            "rwa platform recommendation", 
+            "need help tokenizing", 
+            "tokenization service for real estate", 
+            "rwa consultant"
+            "looking for real world asset tokenization",
+            "need asset tokenization service",
+            "rwa tokenization platform",
+            "real estate tokenization help",
+            "real estate tokenization platform recommendation",
+            "digital tokenization service",
+            "tokenized asset offerings",
+            "looking for real estate tokenization companies",
+            "tokenization of real world assets",
+            "need help with tokenized assets",
+            "best real estate tokenization platform",
+            "gold tokenization development service",
             "rwa consultant",
-            "best rwa platform"
+            "asset tokenization expert",
+            "tokenization service recommendation"
         ],
         'crypto': [
             "looking for crypto developer",
