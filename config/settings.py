@@ -12,12 +12,18 @@ class RedditConfig:
     user_agent: str = config("REDDIT_USER_AGENT", default="LeadScrapingBot/1.0")
     rate_limit: int = 60  # requests per minute (PRAW default)
     subreddits: list[str] = field(default_factory=lambda: [
-        # "artificial",
-        # "ArtificialIntelligence",
-        "rwa"
-        "ArtificialIntelligence"
-        # "smallbusiness",
-        # "SaaS"
+        "ArtificialIntelligence",
+        "MachineLearning",
+        "cryptocurrency",
+        "CryptoTechnology",
+        "blockchain",
+        "ethereum",
+        "smallbusiness",
+        "entrepreneur",
+        "startups",
+        "SaaS",
+        "web3",
+        "defi"
     ])
 
 
@@ -159,10 +165,10 @@ class ScrapingConfig:
     
     # Default keywords (used if --service not specified)
     keywords: list[str] = field(default_factory=lambda: [
-        # Default: High-intent service requests
-        "looking for consultant",
-        "need help implementing",
-        "recommendation for"
+        # Broad terms that find discussions - validation filters to genuine inquiries
+        "tokenization",
+        "blockchain solution",
+        "automation platform"
     ])
     
     max_results_per_source: int = 100
