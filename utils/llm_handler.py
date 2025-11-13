@@ -108,7 +108,6 @@ Example QUALIFIED leads:
 - Explaining concepts to others
 - General questions without seeking service
 - Announcing their own solution/launch
-- Career/job postings
 
 Example NOT QUALIFIED:
 ✗ "RWA tokenization is revolutionizing real estate" → opinion/discussion
@@ -117,7 +116,6 @@ Example NOT QUALIFIED:
 ✗ "How does tokenization work?" → educational question, not service request
 ✗ "Tokenization could transform real estate investing" → speculation/opinion
 ✗ "Excited to announce our blockchain solution!" → announcement
-✗ "Hiring blockchain developer for full-time role" → job posting
 
 **CRITICAL RULES:**
 1. Be STRICT - only qualify if EXPLICITLY asking for external service/help
@@ -148,43 +146,46 @@ Response JSON (no markdown):
         
         text_lower = text.lower()
         
-        # REQUIRED help-seeking patterns (at least one must match)
+        # FIRST-PERSON help-seeking patterns (reduces false positives from news/advice content)
         help_patterns = [
-            # Looking for patterns
-            ("looking for a consultant", "looking for consultant"),
-            ("looking for an agency", "looking for agency"),
-            ("looking for a solution", "looking for solution"),
-            ("looking for a platform", "looking for platform"),
-            ("looking for recommendations", "looking for recommendations"),
-            ("looking for expert", "looking for expert"),
+            # I/we looking for (personal inquiry)
+            ("i'm looking for", "i'm looking for"),
+            ("i am looking for", "i am looking for"),
+            ("we're looking for", "we're looking for"),
+            ("we are looking for", "we are looking for"),
+            ("looking for someone", "looking for someone"),
+            ("looking for help", "looking for help"),
             
-            # Need help patterns
-            ("need help with", "need help with"),
-            ("need help implementing", "need help implementing"),
-            ("need assistance with", "need assistance"),
+            # I/we need (personal need)
+            ("i need help", "i need help"),
+            ("i need assistance", "i need assistance"),
+            ("we need help", "we need help"),
+            ("we need assistance", "we need assistance"),
+            ("i need someone", "i need someone"),
+            ("we need someone", "we need someone"),
             
-            # Recommendation patterns
-            ("recommend a", "recommend a"),
-            ("recommendations for", "recommendations for"),
-            ("any recommendations", "any recommendations"),
-            ("suggestions for", "suggestions for"),
-            
-            # Question patterns
-            ("anyone know", "anyone know"),
-            ("does anyone know", "does anyone know"),
+            # Recommendation requests (first-person)
+            ("can anyone recommend", "can anyone recommend"),
             ("can someone recommend", "can someone recommend"),
+            ("any recommendations for", "any recommendations for"),
+            ("looking for recommendations", "looking for recommendations"),
+            
+            # Question patterns (seeking answers)
+            ("does anyone know", "does anyone know"),
+            ("anyone know where", "anyone know where"),
             ("who can help", "who can help"),
+            ("where can i find", "where can i find"),
+            ("how do i find", "how do i find"),
             
-            # Seeking patterns
-            ("seeking consultant", "seeking consultant"),
-            ("seeking expert", "seeking expert"),
-            ("seeking agency", "seeking agency"),
+            # Seeking/searching patterns
+            ("seeking help", "seeking help"),
+            ("searching for", "searching for"),
+            ("trying to find", "trying to find"),
             
-            # Best/comparison patterns
-            ("best solution for", "best solution for"),
-            ("best platform for", "best platform for"),
-            ("best tool for", "best tool for"),
-            ("best service for", "best service for")
+            # Evaluation/exploration (business decision)
+            ("evaluating solutions", "evaluating solutions"),
+            ("exploring options", "exploring options"),
+            ("considering hiring", "considering hiring")
         ]
         
         for pattern, match_name in help_patterns:
@@ -212,18 +213,20 @@ Response JSON (no markdown):
             return False
         
         # Anti-patterns that disqualify even if help phrase found
+        # ONLY block obvious spam/promotion/hiring, not legitimate inquiries
         anti_patterns = [
-            # Self-promotion
-            "our new", "we just launched", "check out our", "our platform",
-            "we offer", "we provide", "our service", "proud to announce",
+            # Self-promotion (clear spam)
+            "check out our", "our platform offers", 
+            "we provide services", "proud to announce",
+            "join our webinar", "register now",
             
-            # News/updates
-            "just announced", "breaking news", "latest article", "new blog post",
-            "interesting read", "thought this was cool", "saw this article",
-            
-            # Educational (without seeking help)
-            "here's how", "let me explain", "i'll show you", "tutorial on",
-            "guide to", "explanation of"
+            # Job postings (hiring language)
+            "we are hiring", "we're hiring", "job opening",
+            "apply now", "submit your resume", "send cv",
+            "job title:", "position:", "salary:", "duration:",
+            "experience:", "years experience", "yrs exp",
+            "location:", "contract position", "full-time",
+            "part-time", "freelance opportunity"
         ]
         
         # If contains anti-pattern, it's likely not a genuine inquiry
