@@ -89,88 +89,80 @@ class ScrapingConfig:
     """General scraping parameters - SERVICE INQUIRY FOCUSED."""
     
     # ===================================================================
-    # SERVICE-SEEKING KEYWORD PRESETS - ONLY explicit help requests
+    # SERVICE-SEEKING KEYWORD PRESETS
     # ===================================================================
-    # Every keyword shows someone ACTIVELY SEEKING services
+    # Find discussions where people are asking for help - LLM filters to genuine inquiries
     # Use --service flag: python main.py --sources linkedin_apify --service rwa
     
     KEYWORD_PRESETS = {
         'rwa': [
-            # Broad terms that find RWA discussions - LLM will filter to genuine inquiries
-            "rwa tokenization",
-            "tokenize real estate",
-            "asset tokenization",
-            "real world assets blockchain",
-            "property tokenization",
-            "rwa platform"
+            # HIGH-INTENT: Someone explicitly seeking RWA service
+            "looking for rwa tokenization",
+            "rwa platform recommendation",
+            "need help tokenizing",
+            "tokenization service for real estate",
+            "rwa consultant",
+            "best rwa platform"
         ],
         'crypto': [
-            # Broad crypto terms - LLM filters to service requests
-            "crypto payment integration",
-            "web3 development",
-            "defi platform",
-            "crypto wallet",
-            "smart contract development",
-            "blockchain integration"
+            "looking for crypto developer",
+            "crypto integration help",
+            "web3 consultant recommendation",
+            "defi platform recommendation",
+            "crypto payment integration service",
+            "smart contract developer needed"
         ],
         'ai': [
-            # Broad AI terms - LLM filters to service requests
-            "ai automation",
-            "machine learning implementation",
-            "chatbot development",
-            "ai integration",
-            "natural language processing",
-            "computer vision"
+            "looking for ai consultant",
+            "ai automation help",
+            "chatbot development service",
+            "machine learning consultant",
+            "ai integration recommendation",
+            "need ai expert"
         ],
         'blockchain': [
-            # Broad blockchain terms - LLM filters to service requests
-            "blockchain development",
-            "distributed ledger",
-            "blockchain integration",
-            "smart contract",
-            "blockchain solution",
-            "web3 development"
+            "blockchain consultant recommendation",
+            "blockchain development help",
+            "smart contract audit service",
+            "blockchain integration help",
+            "distributed ledger consultant",
+            "blockchain solution needed"
         ],
         'general': [
-            # High-intent generic terms (problems/implementation focus)
-            "integration challenge",
-            "implementation help",
-            "platform recommendation",
-            "solution for",
-            "how to implement",
-            "best tool for"
+            "looking for consultant",
+            "need help implementing",
+            "recommendation for service",
+            "seeking expert in",
+            "looking for agency",
+            "best platform for"
         ],
         'all': [
-            # Comprehensive mix - broad enough to find discussions
-            # RWA
-            "rwa tokenization",
-            "tokenize real estate",
-            "asset tokenization",
-            # Crypto
-            "web3 development",
-            "defi platform",
-            "crypto integration",
-            # AI
-            "ai automation",
-            "machine learning",
-            "chatbot development",
-            # Blockchain
-            "blockchain development",
-            "smart contract",
-            "distributed ledger",
-            # Problem-focused
-            "integration challenge",
-            "implementation help",
-            "platform recommendation"
+            # Mix of all above - 30 keywords max
+            "looking for rwa tokenization",
+            "rwa platform recommendation",
+            "tokenization service",
+            "looking for crypto developer",
+            "crypto integration help",
+            "web3 consultant",
+            "looking for ai consultant",
+            "ai automation help",
+            "blockchain consultant",
+            "blockchain development help",
+            "looking for consultant",
+            "need help implementing",
+            "recommendation for",
+            "seeking expert",
+            "looking for agency",
+            "best solution for"
         ]
     }
     
     # Default keywords (used if --service not specified)
     keywords: list[str] = field(default_factory=lambda: [
-        # Balanced approach: Find discussions, let LLM filter to genuine inquiries
-        "tokenization",
-        "blockchain integration",
-        "ai automation"
+        # Default: High-intent service requests
+        "looking for consultant",
+        "need help implementing",
+        "recommendation for"
     ])
     
     max_results_per_source: int = 100
