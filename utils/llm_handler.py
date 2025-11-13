@@ -1,9 +1,12 @@
-"""LLM-based lead qualification using OpenAI GPT-4-turbo."""
+"""LLM-based lead qualification using OpenAI GPT-4-turbo.
+
+STRICT QUALIFICATION: Only qualifies leads where someone is ACTIVELY SEEKING our services.
+Not discussions, news, opinions, or educational content - only service inquiries.
+"""
 
 import json
 import asyncio
 from typing import Optional
-from datetime import datetime
 
 from decouple import config
 from openai import OpenAI
@@ -13,7 +16,7 @@ from models.lead import Lead
 
 
 class LLMLeadQualifier:
-    """Qualify leads using GPT-4-turbo for intelligent service matching."""
+    """Qualify leads using GPT-4-turbo. ONLY qualifies leads where someone is ACTIVELY SEEKING our services (not just discussing topics)."""
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo", target_service: Optional[str] = None):
         """
@@ -33,107 +36,208 @@ class LLMLeadQualifier:
         self.client = OpenAI(api_key=self.api_key)
     
     def _build_qualification_prompt(self, lead: Lead) -> str:
-        """Build prompt for lead qualification."""
-        # Extract relevant information
-        content = lead.content[:2000]  # Limit to 2000 chars to save tokens
-        title = lead.title or "No title"
-        source = lead.source
-        author = lead.author
-        engagement = lead.engagement_score
-        
-        # Build metadata summary
-        metadata_summary = ""
-        if lead.metadata:
-            service_types = lead.metadata.get('service_types', [])
-            if service_types:
-                metadata_summary = f"\nPre-classified categories: {', '.join(service_types)}"
+        """Build strict qualification prompt - only accept explicit service requests."""
+        content = lead.content[:2000]
+        title = lead.title or ""
+        full_text = f"{title}\n\n{content}" if title else content
         
         # Service-specific filtering instructions
         service_focus = ""
         if self.target_service:
             service_focus = f"""
-**🎯 TARGET SERVICE FILTER: {self.target_service.upper()}**
+**🎯 MANDATORY FILTER: {self.target_service.upper()} SERVICE ONLY**
 
-CRITICAL: You MUST ONLY qualify leads that are specifically asking for {self.target_service} services.
-- If the lead is asking for {self.target_service} help/services: QUALIFY (confidence 0.7+)
-- If the lead is asking for ANY other service: DO NOT QUALIFY (confidence 0.0-0.3)
-- If unclear whether they need {self.target_service}: LOW confidence (0.4-0.6)
+You MUST ONLY qualify leads asking for {self.target_service} service specifically.
+- If asking for {self.target_service}: Check if qualified using rules below
+- If asking for OTHER services: Automatically set is_qualified=false, confidence=0.0
+- If unclear which service: Set confidence=0.3 max
 
-REJECT leads about other services even if they are high-quality service inquiries.
+REJECT leads about other services even if they're high-quality inquiries.
 """
         
-        prompt = f"""You are an expert sales lead qualifier for a technology services company that specializes in:
+        prompt = f"""You are qualifying sales leads. ONLY qualify if someone is ACTIVELY SEEKING our services.
 
 **OUR SERVICES:**
-1. **RWA Tokenization** - Tokenizing real-world assets (real estate, commodities, art) on blockchain
-2. **Crypto/Web3 Development** - DeFi platforms, Web3 apps, smart contracts, crypto payment integration
-3. **Blockchain Solutions** - Custom blockchain development, distributed ledger systems, consensus protocols
-4. **AI/ML Integration** - AI automation, machine learning models, chatbots, neural networks, predictive analytics
+- RWA Tokenization: Tokenizing real-world assets on blockchain
+- Crypto/Web3: DeFi, Web3 apps, smart contracts, crypto integration  
+- Blockchain: Custom blockchain, distributed ledger, consensus
+- AI/ML: AI automation, ML models, chatbots, neural networks
 
 {service_focus}
 
-**YOUR TASK:** Analyze this lead and determine if they are a POTENTIAL CLIENT actively seeking our services.
+**Lead Content:**
+{full_text}
 
-**Lead Information:**
-- Source: {source}
-- Author: {author}
-- Title: {title}
-- Engagement Score: {engagement}{metadata_summary}
+**QUALIFICATION RULES:**
 
-**Content:**
-{content}
+✅ HIGH CONFIDENCE (0.8-1.0) - QUALIFY ONLY IF:
+1. Contains help-seeking phrase (at least one required):
+   • "looking for [service/consultant/agency/solution/platform]"
+   • "need help [with/implementing/building]"
+   • "recommend a [service/tool/platform/consultant]"
+   • "anyone know [a good/any/where to find]"
+   • "seeking [expert/consultant/developer/agency]"
+   • "can someone help me [with/find]"
+   • "suggestions for [service/platform/tool]"
+   • "best [platform/service/tool] for"
+   • "who can help [me/us] with"
+   • "where can I find [service/consultant]"
 
-**QUALIFICATION CRITERIA:**
+2. AND describes a problem/need related to our services
 
-**HIGH CONFIDENCE (0.8-1.0) - QUALIFIED:**
-- Uses explicit help-seeking phrases:
-  • "need help with/implementing/building"
-  • "looking for consultant/developer/expert"
-  • "recommend a solution/platform/service"
-  • "struggling with/can't figure out"
-  • "seeking expert in/looking to hire"
-  • "any suggestions for/best tool for"
-- Describes a specific problem they want solved
-- Asks direct questions about implementation/solutions
-- Expresses urgency or pain points needing resolution
+3. AND is clearly asking for external help (not DIY/learning)
 
-**MODERATE CONFIDENCE (0.5-0.7) - POTENTIALLY QUALIFIED:**
+Example QUALIFIED leads:
+✓ "Looking for a blockchain consultant to help tokenize our real estate portfolio"
+✓ "Need help implementing DeFi protocol, any recommendations?"
+✓ "Anyone know a good RWA platform for asset tokenization?"
+✓ "Seeking AI automation expert to build chatbot for customer service"
+✓ "Best service for tokenizing real estate assets?"
+✓ "Can someone help me find a Web3 developer for our project?"
+
+⚠️ MODERATE (0.4-0.7) - UNCERTAIN:
+- Asks vague "how to" without clearly seeking service
 - Discusses challenges but doesn't explicitly ask for help
-- Mentions exploring solutions or considering options
-- Asks general "how to" questions that could lead to service needs
-- Shows interest in learning about implementation approaches
+- Educational questions that might lead to service need
+- Mentions considering hiring but unclear
 
-**LOW CONFIDENCE (0.0-0.4) - NOT QUALIFIED:**
-- Job postings: "hiring", "looking for full-time", "open position", "career opportunity"
-- News/updates: "just launched", "announcing", "proud to share", "check out this article"
-- General discussion: "what do you think about", "interesting topic", casual opinions
-- Self-promotion: marketing their own products/services
-- Educational content: explaining concepts without seeking help
+❌ LOW (0.0-0.3) - DO NOT QUALIFY:
+- Just discussing/learning about topic (no help request)
+- Sharing news, articles, opinions, updates
+- Promoting their own product/service
+- Explaining concepts to others
+- General questions without seeking service
+- Announcing their own solution/launch
+- Career/job postings
 
-**SERVICE MATCHING:**
-- **RWA Tokenization**: mentions tokenizing assets, real estate on blockchain, asset-backed tokens
-- **Crypto/Web3**: DeFi, Web3, smart contracts, crypto integration, wallet, blockchain payments
-- **Blockchain Solutions**: distributed ledger, consensus, blockchain architecture, custom chains
-- **AI/ML**: AI automation, machine learning, chatbots, neural networks, ML models, predictive analytics
+Example NOT QUALIFIED:
+✗ "RWA tokenization is revolutionizing real estate" → opinion/discussion
+✗ "Just learned about blockchain, so cool!" → learning/excitement
+✗ "Our new RWA platform just launched, check it out!" → self-promotion
+✗ "How does tokenization work?" → educational question, not service request
+✗ "Tokenization could transform real estate investing" → speculation/opinion
+✗ "Excited to announce our blockchain solution!" → announcement
+✗ "Hiring blockchain developer for full-time role" → job posting
 
-**CRITICAL DISTINCTIONS:**
-1. **ASKING FOR HELP** (qualified) vs **JUST DISCUSSING** (not qualified)
-2. **SERVICE INQUIRY** (qualified) vs **JOB POSTING** (not qualified)
-3. **PROBLEM TO SOLVE** (qualified) vs **SHARING KNOWLEDGE** (not qualified)
+**CRITICAL RULES:**
+1. Be STRICT - only qualify if EXPLICITLY asking for external service/help
+2. Quote the exact help-seeking phrase found in your reason
+3. If no help-seeking phrase present → is_qualified=false
+4. Discussions about topics ≠ asking for service
+5. Learning/curiosity ≠ service inquiry
 
-**Response Format (JSON only, no markdown):**
+Response JSON (no markdown):
 {{
   "is_qualified": true/false,
   "confidence_score": 0.0-1.0,
-  "reason": "Brief explanation referencing specific phrases or patterns found (1-2 sentences)",
-  "service_match": ["RWA Tokenization", "Crypto/Web3", "Blockchain Solutions", "AI/ML"] or []
+  "reason": "Quote specific help-seeking phrase found, or explain why not qualified (1-2 sentences)",
+  "service_match": ["RWA Tokenization"] or ["Crypto/Web3"] or ["Blockchain"] or ["AI/ML"] or []
 }}"""
         
         return prompt
     
+    def _contains_help_seeking_phrase(self, text: str) -> tuple[bool, str]:
+        """
+        Check if text contains explicit help-seeking phrases.
+        
+        Returns:
+            (has_phrase, matched_phrase) tuple
+        """
+        if not text:
+            return False, ""
+        
+        text_lower = text.lower()
+        
+        # REQUIRED help-seeking patterns (at least one must match)
+        help_patterns = [
+            # Looking for patterns
+            ("looking for a consultant", "looking for consultant"),
+            ("looking for an agency", "looking for agency"),
+            ("looking for a solution", "looking for solution"),
+            ("looking for a platform", "looking for platform"),
+            ("looking for recommendations", "looking for recommendations"),
+            ("looking for expert", "looking for expert"),
+            
+            # Need help patterns
+            ("need help with", "need help with"),
+            ("need help implementing", "need help implementing"),
+            ("need assistance with", "need assistance"),
+            
+            # Recommendation patterns
+            ("recommend a", "recommend a"),
+            ("recommendations for", "recommendations for"),
+            ("any recommendations", "any recommendations"),
+            ("suggestions for", "suggestions for"),
+            
+            # Question patterns
+            ("anyone know", "anyone know"),
+            ("does anyone know", "does anyone know"),
+            ("can someone recommend", "can someone recommend"),
+            ("who can help", "who can help"),
+            
+            # Seeking patterns
+            ("seeking consultant", "seeking consultant"),
+            ("seeking expert", "seeking expert"),
+            ("seeking agency", "seeking agency"),
+            
+            # Best/comparison patterns
+            ("best solution for", "best solution for"),
+            ("best platform for", "best platform for"),
+            ("best tool for", "best tool for"),
+            ("best service for", "best service for")
+        ]
+        
+        for pattern, match_name in help_patterns:
+            if pattern in text_lower:
+                return True, match_name
+        
+        return False, ""
+    
+    def _is_service_inquiry(self, text: str) -> bool:
+        """
+        Validate that content is truly a service inquiry (not news/discussion/promotion).
+        
+        Returns True only if:
+        1. Contains help-seeking phrase
+        2. Does NOT contain anti-patterns (news, self-promotion, education)
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        
+        # Check for help-seeking phrase first
+        has_help_phrase, _ = self._contains_help_seeking_phrase(text)
+        if not has_help_phrase:
+            return False
+        
+        # Anti-patterns that disqualify even if help phrase found
+        anti_patterns = [
+            # Self-promotion
+            "our new", "we just launched", "check out our", "our platform",
+            "we offer", "we provide", "our service", "proud to announce",
+            
+            # News/updates
+            "just announced", "breaking news", "latest article", "new blog post",
+            "interesting read", "thought this was cool", "saw this article",
+            
+            # Educational (without seeking help)
+            "here's how", "let me explain", "i'll show you", "tutorial on",
+            "guide to", "explanation of"
+        ]
+        
+        # If contains anti-pattern, it's likely not a genuine inquiry
+        for pattern in anti_patterns:
+            if pattern in text_lower:
+                return False
+        
+        return True
+    
     def qualify_lead(self, lead: Lead) -> dict:
         """
-        Qualify a lead using GPT-4-turbo.
+        Qualify a lead using strict validation + GPT-4-turbo.
+        
+        Pre-validates content for help-seeking phrases before expensive LLM call.
         
         Args:
             lead: Lead object to qualify
@@ -142,10 +246,35 @@ REJECT leads about other services even if they are high-quality service inquirie
             dict with:
                 - is_qualified (bool): Whether lead is qualified
                 - confidence_score (float): Confidence 0.0-1.0
-                - reason (str): Explanation
+                - reason (str): Explanation with quoted phrase
                 - service_match (list): Matching services
+                - skipped_llm (bool, optional): True if LLM call was skipped
                 - error (str, optional): Error message if failed
         """
+        # Pre-validation: Check if content has help-seeking phrases
+        has_help_phrase, matched_phrase = self._contains_help_seeking_phrase(lead.content)
+        
+        if not has_help_phrase:
+            # Skip expensive LLM call if no help-seeking phrase found
+            return {
+                "is_qualified": False,
+                "confidence_score": 0.0,
+                "reason": "No help-seeking phrase detected (not asking for service)",
+                "service_match": [],
+                "skipped_llm": True  # Indicates we didn't call LLM
+            }
+        
+        # Secondary validation
+        if not self._is_service_inquiry(lead.content):
+            return {
+                "is_qualified": False,
+                "confidence_score": 0.0,
+                "reason": "Content appears to be news/self-promotion, not genuine inquiry",
+                "service_match": [],
+                "skipped_llm": True
+            }
+        
+        # If validations pass, proceed with LLM call
         try:
             prompt = self._build_qualification_prompt(lead)
             
@@ -155,22 +284,22 @@ REJECT leads about other services even if they are high-quality service inquirie
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a sales lead qualification expert. Always respond with valid JSON only, no markdown formatting."
+                        "content": "You are a strict sales lead qualifier. Only qualify leads where someone explicitly asks for services. Respond with valid JSON only."
                     },
                     {
                         "role": "user",
                         "content": prompt
                     }
                 ],
-                temperature=0.3,  # Lower temperature for more consistent results
+                temperature=0.2,  # Low temperature for consistent strict filtering
                 max_tokens=300,
-                response_format={"type": "json_object"}  # Enforce JSON response
+                response_format={"type": "json_object"}
             )
             
             # Parse response
             result_text = response.choices[0].message.content.strip()
             
-            # Remove markdown code blocks if present
+            # Remove markdown if present
             if result_text.startswith("```json"):
                 result_text = result_text[7:]
             if result_text.startswith("```"):
@@ -181,7 +310,7 @@ REJECT leads about other services even if they are high-quality service inquirie
             
             result = json.loads(result_text)
             
-            # Validate result structure
+            # Validate structure
             required_keys = {"is_qualified", "confidence_score", "reason", "service_match"}
             if not required_keys.issubset(result.keys()):
                 return {
@@ -198,7 +327,7 @@ REJECT leads about other services even if they are high-quality service inquirie
             result["reason"] = str(result["reason"])
             result["service_match"] = list(result["service_match"]) if result["service_match"] else []
             
-            # Clamp confidence score to 0-1
+            # Clamp confidence score
             result["confidence_score"] = max(0.0, min(1.0, result["confidence_score"]))
             
             return result
@@ -216,7 +345,7 @@ REJECT leads about other services even if they are high-quality service inquirie
             return {
                 "is_qualified": False,
                 "confidence_score": 0.0,
-                "reason": f"Failed to parse LLM response as JSON: {str(e)}",
+                "reason": f"Failed to parse LLM response: {str(e)}",
                 "service_match": [],
                 "error": f"JSON parse error: {str(e)}"
             }
@@ -247,7 +376,7 @@ REJECT leads about other services even if they are high-quality service inquirie
         print(f"🤖 Starting LLM qualification for {process_count} leads...")
         
         for idx, lead in enumerate(leads[:process_count], 1):
-            print(f"  [{idx}/{process_count}] Qualifying: {lead.author} - {(lead.title or lead.content[:50])[:60]}...")
+            print(f"  [{idx}/{process_count}] Qualifying: {lead.author}...")
             
             qualification = self.qualify_lead(lead)
             
@@ -264,7 +393,7 @@ REJECT leads about other services even if they are high-quality service inquirie
             # Print result
             status = "✅ QUALIFIED" if qualification["is_qualified"] else "❌ Not qualified"
             confidence = qualification["confidence_score"]
-            print(f"     {status} (confidence: {confidence:.2f}) - {qualification['reason'][:80]}")
+            print(f"     {status} (confidence: {confidence:.2f})")
         
         # Summary
         qualified_count = sum(1 for r in results if r["is_qualified"])
@@ -359,38 +488,46 @@ REJECT leads about other services even if they are high-quality service inquirie
         
         # Summary
         qualified_count = sum(1 for r in final_results if r.get("is_qualified", False))
+        skipped_llm_count = sum(1 for r in final_results if r.get("skipped_llm", False))
+        llm_called = process_count - skipped_llm_count
+        
         print(f"\n✅ Qualification complete: {qualified_count}/{process_count} leads qualified")
+        if skipped_llm_count > 0:
+            print(f"   💰 API savings: {skipped_llm_count}/{process_count} leads filtered by pre-validation (LLM called: {llm_called})")
         
         return final_results
 
 
-# Convenience function for single lead qualification
-def qualify_lead(lead: Lead) -> dict:
+# Convenience functions
+
+def qualify_lead(lead: Lead, target_service: Optional[str] = None) -> dict:
     """
     Qualify a single lead using GPT-4-turbo.
     
     Args:
         lead: Lead object to qualify
+        target_service: Optional service filter (e.g., 'RWA', 'Crypto')
         
     Returns:
         dict with qualification results
     """
-    qualifier = LLMLeadQualifier()
+    qualifier = LLMLeadQualifier(target_service=target_service)
     return qualifier.qualify_lead(lead)
 
 
-def qualify_leads_batch(leads: list[Lead], max_leads: Optional[int] = None) -> list[dict]:
+def qualify_leads_batch(leads: list[Lead], max_leads: Optional[int] = None, target_service: Optional[str] = None) -> list[dict]:
     """
     Qualify multiple leads in batch (sequential).
     
     Args:
         leads: List of Lead objects
         max_leads: Maximum number to process
+        target_service: Optional service filter
         
     Returns:
         List of qualification results
     """
-    qualifier = LLMLeadQualifier()
+    qualifier = LLMLeadQualifier(target_service=target_service)
     return qualifier.batch_qualify_leads(leads, max_leads)
 
 
