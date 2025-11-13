@@ -237,6 +237,12 @@ def main():
         action='store_true',
         help='Automatically qualify leads with LLM (no prompt)'
     )
+    parser.add_argument(
+        '--filter-service',
+        type=str,
+        choices=['RWA', 'Crypto', 'AI/ML', 'Blockchain', 'Web3'],
+        help='Filter leads for specific service type (e.g., --filter-service RWA)'
+    )
     
     args = parser.parse_args()
     
@@ -261,6 +267,8 @@ def main():
     print(f"Keywords: {len(settings.scraping.keywords)}")
     if args.service:
         print(f"Service Type: {args.service.upper()}")
+    if args.filter_service:
+        print(f"🎯 LLM Filter: {args.filter_service} leads only")
     print(f"Max Total Leads: {settings.scraping.max_total_leads}")
     print(f"Output: {args.output}")
     
@@ -298,10 +306,13 @@ def main():
                 try:
                     print("\n🤖 Starting concurrent LLM qualification...")
                     print(f"   Max concurrent requests: {settings.max_concurrent_llm_requests}")
+                    if args.filter_service:
+                        print(f"   🎯 Filtering for: {args.filter_service} service leads")
                     
                     qualifications = asyncio.run(qualify_leads_concurrent(
                         leads,
-                        max_concurrent=settings.max_concurrent_llm_requests
+                        max_concurrent=settings.max_concurrent_llm_requests,
+                        target_service=args.filter_service
                     ))
                     
                     # Filter to only qualified leads
@@ -320,18 +331,22 @@ def main():
                         qualification_rate = (qualified_count / total_leads * 100) if total_leads > 0 else 0
                         
                         # Export to Excel
-                        excel_output = "data/qualified_leads.xlsx"
-                        print(f"\n📊 Exporting qualified leads to {excel_output}...")
-                        export_to_excel(list(qualified_leads), list(qualified_quals), excel_output)
+                        excel_filename = f"data/qualified_leads_{args.filter_service.lower()}.xlsx" if args.filter_service else "data/qualified_leads.xlsx"
+                        print(f"\n📊 Exporting qualified leads to {excel_filename}...")
+                        export_to_excel(list(qualified_leads), list(qualified_quals), excel_filename)
                         
                         # Print summary
                         print("\n" + "=" * 60)
                         print("LLM QUALIFICATION SUMMARY")
                         print("=" * 60)
+                        if args.filter_service:
+                            print(f"🎯 Service Filter: {args.filter_service}")
                         print(f"✅ {qualified_count}/{total_leads} leads qualified ({qualification_rate:.1f}% qualification rate)")
-                        print(f"📄 Excel export: {excel_output}")
+                        print(f"📄 Excel export: {excel_filename}")
                     else:
                         print("\n⚠️  No leads were qualified by the LLM")
+                        if args.filter_service:
+                            print(f"    (No leads found asking for {args.filter_service} services)")
                         
                 except Exception as e:
                     print(f"\n⚠️  LLM qualification failed: {e}")
