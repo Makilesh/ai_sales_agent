@@ -136,56 +136,65 @@ Response JSON (no markdown):
     
     def _contains_help_seeking_phrase(self, text: str) -> tuple[bool, str]:
         """
-        Check if text contains explicit help-seeking phrases.
+        Check if text contains help-seeking phrases that indicate service inquiry.
+        
+        Uses FLEXIBLE patterns for Reddit/casual platforms (includes imperative forms).
         
         Returns:
-            (has_phrase, matched_phrase) tuple
+            tuple: (has_phrase: bool, matched_phrase: str)
         """
         if not text:
             return False, ""
         
         text_lower = text.lower()
         
-        # FIRST-PERSON help-seeking patterns (reduces false positives from news/advice content)
+        # FLEXIBLE help-seeking patterns (Reddit/casual appropriate)
         help_patterns = [
-            # I/we looking for (personal inquiry)
-            ("i'm looking for", "i'm looking for"),
-            ("i am looking for", "i am looking for"),
-            ("we're looking for", "we're looking for"),
-            ("we are looking for", "we are looking for"),
-            ("looking for someone", "looking for someone"),
-            ("looking for help", "looking for help"),
-            
-            # I/we need (personal need)
-            ("i need help", "i need help"),
-            ("i need assistance", "i need assistance"),
-            ("we need help", "we need help"),
-            ("we need assistance", "we need assistance"),
-            ("i need someone", "i need someone"),
-            ("we need someone", "we need someone"),
-            
-            # Recommendation requests (first-person)
-            ("can anyone recommend", "can anyone recommend"),
-            ("can someone recommend", "can someone recommend"),
-            ("any recommendations for", "any recommendations for"),
-            ("looking for recommendations", "looking for recommendations"),
-            
-            # Question patterns (seeking answers)
-            ("does anyone know", "does anyone know"),
-            ("anyone know where", "anyone know where"),
-            ("who can help", "who can help"),
-            ("where can i find", "where can i find"),
-            ("how do i find", "how do i find"),
-            
-            # Seeking/searching patterns
+            # Direct requests (with or without "I/we")
+            ("looking for", "looking for"),
+            ("need advice", "need advice"),
+            ("need help", "need help"),
+            ("need guidance", "need guidance"),
+            ("need suggestions", "need suggestions"),
+            ("need recommendations", "need recommendations"),
+            ("seeking advice", "seeking advice"),
             ("seeking help", "seeking help"),
-            ("searching for", "searching for"),
-            ("trying to find", "trying to find"),
+            ("seeking recommendations", "seeking recommendations"),
             
-            # Evaluation/exploration (business decision)
-            ("evaluating solutions", "evaluating solutions"),
+            # Question forms (common on Reddit)
+            ("any advice", "any advice"),
+            ("any suggestions", "any suggestions"),
+            ("any recommendations", "any recommendations"),
+            ("anyone recommend", "anyone recommend"),
+            ("anyone suggest", "anyone suggest"),
+            ("anyone know", "anyone know"),
+            ("does anyone", "does anyone"),
+            ("can someone", "can someone"),
+            ("who can help", "who can help"),
+            ("where can i", "where can i"),
+            ("how do i", "how do i"),
+            ("what should i", "what should i"),
+            
+            # Imperative/casual (Reddit style)
+            ("help me", "help me"),
+            ("help needed", "help needed"),
+            ("advice needed", "advice needed"),
+            ("recommendations needed", "recommendations needed"),
+            ("suggestions welcome", "suggestions welcome"),
+            
+            # Evaluation phrases
+            ("looking to hire", "looking to hire"),
+            ("considering", "considering"),
+            ("evaluating", "evaluating"),
             ("exploring options", "exploring options"),
-            ("considering hiring", "considering hiring")
+            
+            # Which/best questions (buying signals)
+            ("which is best", "which is best"),
+            ("what's the best", "what's the best"),
+            ("whats the best", "whats the best"),
+            ("best way to", "best way to"),
+            ("best solution", "best solution"),
+            ("best platform", "best platform")
         ]
         
         for pattern, match_name in help_patterns:
