@@ -111,6 +111,7 @@ class ScrapingConfig:
             "tokenization",
             "tokenized",
             "tokenize",
+            "rwa",
             "tokenized assets",
             "tokenized asset",
             "tokenized asset offerings",
