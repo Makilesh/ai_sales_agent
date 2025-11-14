@@ -24,6 +24,7 @@ class RedditScraper(BaseScraper):
     ) -> None:
         super().__init__(keywords, rate_limit)
         self.subreddits = subreddits
+        self.skip_keyword_filter = True  # Reddit uses help-seeking subreddits, bypass keyword filter
         
         try:
             self.reddit = praw.Reddit(
@@ -36,10 +37,14 @@ class RedditScraper(BaseScraper):
             raise ValueError(f"Failed to initialize Reddit client: {e}")
     
     def _filter_leads(self, leads: list[Lead]) -> list[Lead]:
-        """Override to disable keyword filtering for Reddit - let LLM handle all filtering."""
-        # Return all leads without keyword filtering since we're targeting help-seeking subreddits
-        print(f"   📌 Reddit: Skipping keyword filter, passing {len(leads)} leads to LLM qualification")
-        return leads
+        """
+        Override parent's keyword filtering for Reddit.
+        
+        Reddit uses help-seeking subreddits, so we trust the subreddit selection
+        and let ALL posts through (LLM will filter for service match).
+        """
+        print(f"   � Reddit: Keyword filter disabled (trusting help-seeking subreddits)")
+        return leads  # Return all leads, no keyword filter
     
     async def scrape(self) -> list[Lead]:
         """Scrape posts and comments from specified subreddits."""
@@ -54,16 +59,6 @@ class RedditScraper(BaseScraper):
                 continue
         
         return all_leads
-    
-    def _filter_leads(self, leads: list[Lead]) -> list[Lead]:
-        """
-        Override parent's keyword filtering for Reddit.
-        
-        Reddit uses help-seeking subreddits, so we trust the subreddit selection
-        and let ALL posts through (LLM will filter for service match).
-        """
-        print(f"   📝 Note: Reddit keyword filtering DISABLED - trusting help-seeking subreddits")
-        return leads  # Return all leads, no keyword filter
     
     async def _scrape_subreddit(self, subreddit_name: str) -> list[Lead]:
         """Scrape a single subreddit for posts and comments."""
