@@ -203,6 +203,92 @@ Response JSON (no markdown):
         
         return False, ""
     
+    def _is_obvious_non_inquiry(self, text: str) -> bool:
+        """
+        Quick filter for obvious spam/promotion/news that should never qualify.
+        Only rejects OBVIOUS non-inquiries to reduce false negatives.
+        
+        Returns True if content is definitely not an inquiry.
+        """
+        if not text:
+            return True
+        
+        text_lower = text.lower()
+        
+        # Obvious spam/promotion indicators
+        spam_indicators = [
+            "check out our", "our platform offers", "we provide services",
+            "proud to announce", "join our webinar", "register now",
+            "click here", "buy now", "limited time offer",
+            "visit our website", "dm for more", "link in bio"
+        ]
+        
+        # Obvious job postings (hiring, not seeking service)
+        hiring_indicators = [
+            "we are hiring", "we're hiring", "job opening",
+            "apply now", "submit your resume", "send cv to",
+            "position available", "now accepting applications"
+        ]
+        
+        # Check for multiple spam indicators
+        spam_count = sum(1 for indicator in spam_indicators if indicator in text_lower)
+        hiring_count = sum(1 for indicator in hiring_indicators if indicator in text_lower)
+        
+        # If multiple spam/hiring indicators, definitely not inquiry
+        if spam_count >= 2 or hiring_count >= 2:
+            return True
+        
+        return False
+    
+    def _has_implicit_inquiry_signals(self, text: str) -> bool:
+        """
+        Check for implicit signals that suggest service inquiry without explicit help phrases.
+        
+        Examples of implicit inquiries:
+        - "Struggling with tokenization implementation"
+        - "Our RWA platform needs smart contract integration"
+        - "Real estate tokenization budget: $50k"
+        - "Anyone experienced with asset tokenization?"
+        
+        Returns True if content has inquiry signals worth LLM evaluation.
+        """
+        if not text:
+            return False
+        
+        text_lower = text.lower()
+        
+        # Implicit inquiry signals
+        inquiry_signals = [
+            # Problem statements (often lead to service requests)
+            "struggling with", "having trouble", "can't figure out",
+            "issues with", "problems with", "challenge with",
+            "difficulty with", "stuck on", "blocked by",
+            
+            # Evaluation/consideration phrases
+            "considering hiring", "thinking about", "planning to",
+            "budget for", "budget:", "price range", "cost estimate",
+            "willing to pay", "looking to invest",
+            
+            # Question forms that imply seeking solution
+            "has anyone", "anyone experienced", "anyone here",
+            "anyone tried", "anyone worked with",
+            
+            # Resource/tool seeking (implicit help)
+            "what tool", "which platform", "which service",
+            "recommend", "suggestion", "advice",
+            
+            # Business need statements
+            "we need", "i need", "our company needs",
+            "our project requires", "requirement for",
+            "must have", "essential to have"
+        ]
+        
+        # Count signals
+        signal_count = sum(1 for signal in inquiry_signals if signal in text_lower)
+        
+        # If 2+ signals, worth sending to LLM
+        return signal_count >= 2
+    
     def _is_service_inquiry(self, text: str) -> bool:
         """
         Validate that content is truly a service inquiry (not news/discussion/promotion).
@@ -250,6 +336,7 @@ Response JSON (no markdown):
         Qualify a lead using strict validation + GPT-4-turbo.
         
         Pre-validates content for help-seeking phrases before expensive LLM call.
+        NOW WITH RELAXED VALIDATION: Allows implicit service inquiries through to LLM.
         
         Args:
             lead: Lead object to qualify
@@ -263,28 +350,38 @@ Response JSON (no markdown):
                 - skipped_llm (bool, optional): True if LLM call was skipped
                 - error (str, optional): Error message if failed
         """
-        # Pre-validation: Check if content has help-seeking phrases
-        has_help_phrase, matched_phrase = self._contains_help_seeking_phrase(lead.content)
+        # RELAXED PRE-VALIDATION: Only skip obvious non-inquiries
+        # Let LLM evaluate borderline cases instead of pre-filtering
         
-        if not has_help_phrase:
-            # Skip expensive LLM call if no help-seeking phrase found
+        # Quick rejection: obvious spam/promotion/news
+        if self._is_obvious_non_inquiry(lead.content):
             return {
                 "is_qualified": False,
                 "confidence_score": 0.0,
-                "reason": "No help-seeking phrase detected (not asking for service)",
-                "service_match": [],
-                "skipped_llm": True  # Indicates we didn't call LLM
-            }
-        
-        # Secondary validation
-        if not self._is_service_inquiry(lead.content):
-            return {
-                "is_qualified": False,
-                "confidence_score": 0.0,
-                "reason": "Content appears to be news/self-promotion, not genuine inquiry",
+                "reason": "Content is spam/promotion/news, not inquiry",
                 "service_match": [],
                 "skipped_llm": True
             }
+        
+        # Check for explicit help-seeking phrases
+        has_help_phrase, matched_phrase = self._contains_help_seeking_phrase(lead.content)
+        
+        # CHANGED: Instead of hard rejection, just add context for LLM
+        # Let borderline cases through to LLM for evaluation
+        if not has_help_phrase:
+            # Still check for implicit inquiry signals
+            if self._has_implicit_inquiry_signals(lead.content):
+                # Let LLM decide - could be valid implicit inquiry
+                pass  # Continue to LLM call
+            else:
+                # No explicit or implicit signals - likely just discussion
+                return {
+                    "is_qualified": False,
+                    "confidence_score": 0.0,
+                    "reason": "No help-seeking phrase or inquiry signals detected",
+                    "service_match": [],
+                    "skipped_llm": True
+                }
         
         # If validations pass, proceed with LLM call
         try:
