@@ -107,26 +107,41 @@ class ScrapingConfig:
     KEYWORD_PRESETS = {
         'rwa': [
             # HIGH-INTENT: Someone explicitly seeking RWA service
-            "looking for rwa tokenization", 
-            "rwa platform recommendation", 
-            "need help tokenizing", 
-            "tokenization service for real estate", 
-            "rwa consultant"
+            # Single-word / short tokens (catch broader mentions)
+            "tokenization",
+            "tokenized",
+            "tokenize",
+            "tokenized assets",
+            "tokenized asset",
+            "tokenized asset offerings",
+            "tokenization of real world assets",
+            "tokenization service",
+            "asset tokenization",
+            "digital tokenization",
+            "real estate token",
+            "real estate tokenization",
+
+            # Longer, help-seeking phrases
             "looking for real world asset tokenization",
+            "looking for rwa tokenization",
             "need asset tokenization service",
-            "rwa tokenization platform",
+            "need help tokenizing",
+            "need help with tokenized assets",
+            "tokenization service for real estate",
             "real estate tokenization help",
             "real estate tokenization platform recommendation",
-            "digital tokenization service",
-            "tokenized asset offerings",
             "looking for real estate tokenization companies",
-            "tokenization of real world assets",
-            "need help with tokenized assets",
             "best real estate tokenization platform",
+            "gold tokenization development",
             "gold tokenization development service",
+            "tokenization service recommendation",
+
+            # Professional / vendor-oriented phrases
+            "rwa tokenization",
             "rwa consultant",
-            "asset tokenization expert",
-            "tokenization service recommendation"
+            "rwa platform recommendation",
+            "rwa tokenization platform",
+            "asset tokenization expert"
         ],
         'crypto': [
             "looking for crypto developer",
