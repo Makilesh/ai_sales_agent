@@ -21,6 +21,8 @@ class RedditConfig:
         "startups",  # Startup founders seeking services
         "smallbusiness",  # Small business help requests
         "SaaS",  # SaaS business discussions
+        "freelance",  # Freelance service requests
+        "startupideas",  # Startup ideas & service needs
         # TECH-SPECIFIC WITH HELP REQUESTS
         "learnmachinelearning",  # People asking for help
         "cryptocurrency",  # Crypto help/advice
@@ -28,6 +30,14 @@ class RedditConfig:
         "web3",  # Web3 development help
         "ethdev",  # Ethereum development help
         "solidity",  # Smart contract help
+        "defi",  # DeFi & tokenization discussions
+        "NFTsMarketplace",  # NFT & tokenized assets
+        "blockchainstartups",  # Blockchain startup discussions
+        # RWA-SPECIFIC SUBREDDITS
+        "realestateinvesting",  # Real estate tokenization opportunities
+        "RealEstate",  # Real estate professionals
+        "webdev",  # Web developers seeking services
+        "digitalnomad",  # Entrepreneurs & service seekers
     ])
 
 

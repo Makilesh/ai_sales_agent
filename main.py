@@ -330,8 +330,12 @@ def main():
                         qualified_count = len(qualified_leads)
                         qualification_rate = (qualified_count / total_leads * 100) if total_leads > 0 else 0
                         
-                        # Export to Excel
-                        excel_filename = f"data/qualified_leads_{args.filter_service.lower()}.xlsx" if args.filter_service else "data/qualified_leads.xlsx"
+                        # Export to Excel with timestamp to avoid permission conflicts
+                        timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        if args.filter_service:
+                            excel_filename = f"data/qualified_leads_{args.filter_service.lower()}_{timestamp_str}.xlsx"
+                        else:
+                            excel_filename = f"data/qualified_leads_{timestamp_str}.xlsx"
                         print(f"\n📊 Exporting qualified leads to {excel_filename}...")
                         export_to_excel(list(qualified_leads), list(qualified_quals), excel_filename)
                         
