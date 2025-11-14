@@ -323,6 +323,14 @@ def main():
                         target_service=args.filter_service
                     ))
                     
+                    # Add qualification results back to lead objects
+                    for lead, qual in zip(leads, qualifications):
+                        lead.qualification_result = qual
+                    
+                    # Save leads with qualification results
+                    print(f"\n💾 Saving leads with qualification results to {args.output}...")
+                    save_leads(leads, args.output)
+                    
                     # Filter to only qualified leads
                     qualified_results = [
                         (lead, qual) 
