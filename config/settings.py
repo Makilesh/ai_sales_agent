@@ -109,103 +109,239 @@ class ScrapingConfig:
     """General scraping parameters - SERVICE INQUIRY FOCUSED."""
     
     # ===================================================================
-    # SERVICE-SEEKING KEYWORD PRESETS
+    # PLATFORM-SPECIFIC KEYWORD PRESETS
     # ===================================================================
-    # Find discussions where people are asking for help - LLM filters to genuine inquiries
-    # Use --service flag: python main.py --sources linkedin_apify --service rwa
+    # Reddit vs LinkedIn have different content types and search behaviors
+    # Use --service flag: python main.py --sources reddit --service rwa_reddit
+    #                or: python main.py --sources linkedin_apify --service rwa_linkedin
+    
+    # REDDIT BEHAVIOR:
+    # - Searches post titles AND content
+    # - Casual/informal language
+    # - Mix of questions, advice-seeking, hiring posts
+    # - Best in r/forhire, r/slavelabour (explicit gig posts)
+    
+    # LINKEDIN BEHAVIOR:
+    # - Searches post content (literal keyword matching)
+    # - Professional language
+    # - Mix of announcements, thought leadership, job posts
+    # - Returns posts CONTAINING keywords (not necessarily requests)
     
     KEYWORD_PRESETS = {
-        'rwa': [
-            # HIGH-INTENT: Someone explicitly seeking RWA service
-            # Single-word / short tokens (catch broader mentions)
-            "tokenization",
-            "tokenized",
-            "tokenize",
-            "rwa",
-            "tokenized assets",
-            "tokenized asset",
-            "tokenized asset offerings",
-            "tokenization of real world assets",
-            "tokenization service",
-            "asset tokenization",
-            "digital tokenization",
-            "real estate token",
+        # ============================================================
+        # REDDIT-OPTIMIZED: Short, casual, forum-style
+        # ============================================================
+        'rwa_reddit': [
+            # Tier 1: Explicit hiring/service requests (r/forhire style)
+            "[Hiring] tokenization",
+            "[For Hire] blockchain",
+            "[Task] smart contract",
+            "need developer tokenization",
+            "hiring blockchain consultant",
+            "looking for RWA developer",
+            
+            # Tier 2: Help-seeking (casual Reddit language)
+            "how do I tokenize",
+            "help with tokenization",
+            "tokenization advice",
+            "recommend tokenization platform",
+            "best way to tokenize assets",
+            "anyone know tokenization",
+            
+            # Tier 3: Problem statements (implicit need)
+            "tokenization too expensive",
+            "struggling with asset tokenization",
+            "tokenization budget",
+            "need simple tokenization",
+            "tokenization for small business",
+            
+            # Tier 4: Broader RWA topics (will catch discussions)
+            "real world asset tokenization",
+            "RWA platform",
+            "tokenized real estate",
+            "asset backed tokens",
+        ],
+        
+        # ============================================================
+        # LINKEDIN-OPTIMIZED: Professional, job-posting style
+        # ============================================================
+        'rwa_linkedin': [
+            # Strategy: Use single keywords that appear in job posts/requests
+            # LinkedIn's literal search means complex phrases backfire
+            
+            # Core RWA terms (high relevance)
+            "tokenization consultant",
+            "RWA developer",
+            "asset tokenization expert",
+            "blockchain tokenization",
             "real estate tokenization",
-
-            # Longer, help-seeking phrases
-            "looking for real world asset tokenization",
-            "looking for rwa tokenization",
-            "need asset tokenization service",
-            "need help tokenizing",
-            "need help with tokenized assets",
-            "tokenization service for real estate",
-            "real estate tokenization help",
-            "real estate tokenization platform recommendation",
-            "looking for real estate tokenization companies",
-            "best real estate tokenization platform",
-            "gold tokenization development",
-            "gold tokenization development service",
-            "tokenization service recommendation",
-
-            # Professional / vendor-oriented phrases
-            "rwa tokenization",
-            "rwa consultant",
-            "rwa platform recommendation",
-            "rwa tokenization platform",
-            "asset tokenization expert"
+            
+            # Job posting language
+            "tokenization position",
+            "hiring tokenization",
+            "tokenization role",
+            "tokenization engineer",
+            "tokenization architect",
+            
+            # Project-based (catches RFPs/project posts)
+            "tokenization project",
+            "RWA implementation",
+            "tokenization solution",
+            "tokenization platform development",
+            
+            # Budget/commercial signals
+            "tokenization RFP",
+            "tokenization proposal",
+            "tokenization partnership",
+            "tokenization vendor",
+            
+            # Avoid: "looking for" (returns "looking back at", "if you're looking for")
+            # Avoid: Long phrases (LinkedIn doesn't do semantic search)
         ],
-        'crypto': [
-            "looking for crypto developer",
-            "crypto integration help",
-            "web3 consultant recommendation",
-            "defi platform recommendation",
-            "crypto payment integration service",
-            "smart contract developer needed"
-        ],
-        'ai': [
-            "looking for ai consultant",
-            "ai automation help",
-            "chatbot development service",
-            "machine learning consultant",
-            "ai integration recommendation",
-            "need ai expert"
-        ],
-        'blockchain': [
-            "blockchain consultant recommendation",
-            "blockchain development help",
-            "smart contract audit service",
-            "blockchain integration help",
-            "distributed ledger consultant",
-            "blockchain solution needed"
-        ],
-        'general': [
-            "looking for consultant",
-            "need help implementing",
-            "recommendation for service",
-            "seeking expert in",
-            "looking for agency",
-            "best platform for"
-        ],
-        'all': [
-            # Mix of all above - 30 keywords max
-            "looking for rwa tokenization",
-            "rwa platform recommendation",
+        
+      
+        # ============================================================
+        # UNIVERSAL RWA (works on both, but less optimized)
+        # ============================================================
+        'rwa': [
+            # Conservative keywords that work across platforms
+            "tokenization",
+            "RWA tokenization",
+            "asset tokenization",
+            "real estate tokenization",
             "tokenization service",
-            "looking for crypto developer",
-            "crypto integration help",
+            "blockchain tokenization",
+            "tokenization consultant",
+            "tokenization platform",
+            "tokenization developer",
+            "smart contract tokenization",
+        ],
+        
+        # ============================================================
+        # CRYPTO SERVICES
+        # ============================================================
+        'crypto_reddit': [
+            "[Hiring] crypto developer",
+            "[For Hire] web3",
+            "need crypto help",
+            "crypto integration advice",
+            "recommend crypto developer",
+            "web3 developer needed",
+            "DeFi help",
+            "smart contract audit",
+        ],
+        
+        'crypto_linkedin': [
+            "crypto developer position",
+            "web3 engineer",
+            "DeFi consultant",
+            "crypto integration project",
+            "blockchain developer hiring",
+            "smart contract developer",
+            "crypto payment integration",
+        ],
+        
+        'crypto': [
+            "crypto developer",
             "web3 consultant",
-            "looking for ai consultant",
-            "ai automation help",
+            "DeFi platform",
+            "crypto integration",
+            "smart contract developer",
+        ],
+        
+        # ============================================================
+        # AI/ML SERVICES
+        # ============================================================
+        'ai_reddit': [
+            "[Hiring] AI developer",
+            "[Task] machine learning",
+            "need AI help",
+            "AI automation advice",
+            "recommend AI consultant",
+            "chatbot development help",
+            "ML model help",
+        ],
+        
+        'ai_linkedin': [
+            "AI consultant position",
+            "machine learning engineer",
+            "AI automation project",
+            "chatbot developer",
+            "ML engineer hiring",
+            "AI integration specialist",
+        ],
+        
+        'ai': [
+            "AI consultant",
+            "machine learning",
+            "AI automation",
+            "chatbot development",
+            "AI integration",
+        ],
+        
+        # ============================================================
+        # BLOCKCHAIN SERVICES
+        # ============================================================
+        'blockchain_reddit': [
+            "[Hiring] blockchain developer",
+            "[For Hire] smart contract",
+            "need blockchain help",
+            "blockchain consultant advice",
+            "smart contract audit help",
+            "recommend blockchain developer",
+        ],
+        
+        'blockchain_linkedin': [
+            "blockchain consultant position",
+            "blockchain architect",
+            "blockchain developer hiring",
+            "smart contract engineer",
+            "blockchain integration project",
+            "distributed ledger consultant",
+        ],
+        
+        'blockchain': [
             "blockchain consultant",
-            "blockchain development help",
-            "looking for consultant",
-            "need help implementing",
-            "recommendation for",
-            "seeking expert",
-            "looking for agency",
-            "best solution for"
-        ]
+            "blockchain developer",
+            "smart contract",
+            "blockchain integration",
+            "distributed ledger",
+        ],
+        
+        # ============================================================
+        # GENERIC SERVICE-SEEKING (platform-agnostic)
+        # ============================================================
+        'general': [
+            "consultant needed",
+            "developer needed",
+            "expert needed",
+            "service recommendation",
+            "platform recommendation",
+        ],
     }
+    
+    # ===================================================================
+    # KEYWORD USAGE GUIDE
+    # ===================================================================
+    # 
+    # REDDIT RUNS:
+    # python main.py --sources reddit --service rwa_reddit --qualify --max-total-leads 200
+    # - Uses Reddit-optimized keywords (casual, forum-style)
+    # - Searches r/forhire, r/slavelabour, etc.
+    # - Catches "[Hiring]" posts and help-seeking questions
+    # 
+    # LINKEDIN RUNS:
+    # python main.py --sources linkedin_apify --service rwa_linkedin --qualify --max-total-leads 200
+    # - Uses LinkedIn-optimized keywords (professional, job-posting style)
+    # - Avoids complex phrases that match wrong content
+    # - Focuses on job postings and project announcements
+    # 
+    # BOTH PLATFORMS (TESTING):
+    # python main.py --sources reddit,linkedin_apify --service rwa --qualify --max-total-leads 100
+    # - Uses universal keywords
+    # - Good for A/B testing which platform performs better
+    # 
+    # ===================================================================
     
     # Default keywords (used if --service not specified)
     keywords: list[str] = field(default_factory=lambda: [
