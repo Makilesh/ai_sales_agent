@@ -68,11 +68,60 @@ class Lead:
         )
     
     def is_qualified(self, min_engagement: int = 1) -> bool:
-        """Check if lead meets basic qualification criteria."""
-        return (
-            self.engagement_score >= min_engagement
-            and len(self.content) >= 20
-        )
+        """
+        Check if lead meets basic qualification criteria.
+        
+        Relaxed pre-validation to let more leads reach LLM:
+        - Min 10 words (catches brief service requests like "Need RWA dev. Budget $50k")
+        - Min engagement 1 (catches new posts)
+        - Spam filtering (basic checks for promotional content)
+        """
+        # Filter 1: Minimum word count (lowered from 20 to 10 words)
+        word_count = len(self.content.split())
+        if word_count < 10:
+            return False
+        
+        # Filter 2: Minimum engagement score (catches new posts)
+        if self.engagement_score < min_engagement:
+            return False
+        
+        # Filter 3: Basic spam detection
+        if self._is_likely_spam():
+            return False
+        
+        return True
+    
+    def _is_likely_spam(self) -> bool:
+        """
+        Basic spam detection to filter obvious promotional content.
+        Returns True if content is likely spam.
+        """
+        content_lower = self.content.lower()
+        
+        # Spam indicators
+        spam_phrases = [
+            'click here', 'buy now', 'limited time offer', 'act now',
+            'sign up today', 'free trial', 'no credit card', 'risk free',
+            'dm for details', 'check out my', 'follow me', 'subscribe',
+            '🚀🚀🚀', '💰💰💰', 'crypto giveaway', 'airdrop', 'pump and dump'
+        ]
+        
+        # Check for multiple spam phrases
+        spam_count = sum(1 for phrase in spam_phrases if phrase in content_lower)
+        
+        # If multiple spam indicators, likely spam
+        if spam_count >= 3:
+            return True
+        
+        # Check for excessive promotional language
+        promo_words = ['buy', 'sale', 'discount', 'offer', 'deal', 'free']
+        promo_count = sum(1 for word in promo_words if word in content_lower)
+        
+        # If content is short and heavily promotional, likely spam
+        if word_count := len(self.content.split()) < 30 and promo_count >= 4:
+            return True
+        
+        return False
     
     def __repr__(self) -> str:
         """String representation of the lead."""
