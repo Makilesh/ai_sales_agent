@@ -50,6 +50,7 @@ class RedditScraper(BaseScraper):
         """Scrape posts and comments from specified subreddits."""
         all_leads: list[Lead] = []
         
+        # Scrape all subreddits with multi-feed approach
         for subreddit_name in self.subreddits:
             try:
                 leads = await self._scrape_subreddit(subreddit_name)
@@ -60,6 +61,85 @@ class RedditScraper(BaseScraper):
         
         return all_leads
     
+    async def _search_reddit_for_service_requests(self) -> list[Lead]:
+        """
+        Search Reddit for specific service request phrases.
+        Targets high-intent leads asking for RWA/tokenization services.
+        """
+        leads: list[Lead] = []
+        
+        # High-intent search phrases
+        search_phrases = [
+            "need help tokenizing",
+            "looking for tokenization service",
+            "best RWA platform",
+            "real estate tokenization service",
+            "need asset tokenization",
+            "tokenization provider",
+            "how to tokenize assets",
+            "tokenization platform recommendation"
+        ]
+        
+        # Search across all subreddits
+        try:
+            for phrase in search_phrases:
+                await self._apply_rate_limit()
+                
+                # Search Reddit with time filter (last month)
+                search_results = await asyncio.to_thread(
+                    lambda: list(self.reddit.subreddit('all').search(
+                        phrase, 
+                        time_filter='month',
+                        limit=20
+                    ))
+                )
+                
+                for submission in search_results:
+                    await self._apply_rate_limit()
+                    
+                    # Create lead from search result
+                    try:
+                        post_lead = self._create_lead_from_post(submission, submission.subreddit.display_name)
+                        if post_lead:
+                            # Mark as search-targeted lead
+                            post_lead.metadata['search_phrase'] = phrase
+                            post_lead.metadata['targeted_search'] = True
+                            leads.append(post_lead)
+                    except Exception as e:
+                        print(f"Error processing search result {submission.id}: {e}")
+                        continue
+                    
+                    # Also check comments on search results (high-engagement only)
+                    if submission.score >= 20:
+                        try:
+                            await self._apply_rate_limit()
+                            await asyncio.to_thread(submission.comments.replace_more, limit=0)
+                            await self._apply_rate_limit()
+                            all_comments = await asyncio.to_thread(submission.comments.list)
+                            
+                            for comment in all_comments[:30]:
+                                if isinstance(comment, Comment):
+                                    comment_lead = self._create_lead_from_comment(
+                                        comment,
+                                        submission,
+                                        submission.subreddit.display_name
+                                    )
+                                    if comment_lead:
+                                        comment_lead.metadata['search_phrase'] = phrase
+                                        comment_lead.metadata['targeted_search'] = True
+                                        leads.append(comment_lead)
+                        except Exception as e:
+                            print(f"Error processing search comments for {submission.id}: {e}")
+                            continue
+            
+            if leads:
+                print(f"   🎯 Reddit Search: Found {len(leads)} targeted leads from search phrases")
+                
+        except Exception as e:
+            print(f"Error in Reddit search: {e}")
+        
+        return leads
+    
     async def _scrape_subreddit(self, subreddit_name: str) -> list[Lead]:
         """Scrape a single subreddit for posts and comments."""
         leads: list[Lead] = []
@@ -68,14 +148,18 @@ class RedditScraper(BaseScraper):
             # Wrap PRAW call in thread executor for true async
             subreddit = await asyncio.to_thread(self.reddit.subreddit, subreddit_name)
             
-            # Scrape from multiple feeds for variety
+            # Scrape from multiple feeds for maximum coverage
             # Hot posts (current trending)
             hot_posts = await asyncio.to_thread(lambda: list(subreddit.hot(limit=50)))
             # New posts (recent activity)
             new_posts = await asyncio.to_thread(lambda: list(subreddit.new(limit=50)))
+            # Top posts from the past week (high-quality content)
+            top_week_posts = await asyncio.to_thread(lambda: list(subreddit.top(time_filter='week', limit=30)))
+            # Top posts from the past month (more high-quality content)
+            top_month_posts = await asyncio.to_thread(lambda: list(subreddit.top(time_filter='month', limit=20)))
             
             # Combine and deduplicate
-            all_posts = {post.id: post for post in hot_posts + new_posts}.values()
+            all_posts = {post.id: post for post in hot_posts + new_posts + top_week_posts + top_month_posts}.values()
             
             for submission in all_posts:
                 await self._apply_rate_limit()
@@ -89,7 +173,11 @@ class RedditScraper(BaseScraper):
                     print(f"Error processing post {submission.id}: {e}")
                     continue
                 
-                # Check comments (increased from 10 to 20)
+                # Dynamic comment depth based on engagement
+                # High-engagement posts (score ≥50) get more comments checked
+                comment_limit = 50 if submission.score >= 50 else 20
+                
+                # Check comments
                 try:
                     # Apply rate limit before fetching comments
                     await self._apply_rate_limit()
@@ -98,7 +186,7 @@ class RedditScraper(BaseScraper):
                     await self._apply_rate_limit()
                     all_comments = await asyncio.to_thread(submission.comments.list)
                     
-                    for comment in all_comments[:20]:  # First 20 comments (increased)
+                    for comment in all_comments[:comment_limit]:
                         if isinstance(comment, Comment):
                             comment_lead = self._create_lead_from_comment(
                                 comment, 
