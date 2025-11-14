@@ -12,22 +12,32 @@ class RedditConfig:
     user_agent: str = config("REDDIT_USER_AGENT", default="LeadScrapingBot/1.0")
     rate_limit: int = 60  # requests per minute (PRAW default)
     subreddits: list[str] = field(default_factory=lambda: [
-        # HELP-SEEKING & SERVICE-REQUEST SUBREDDITS (PROVEN PERFORMERS)
+        # TIER 1: EXPLICIT SERVICE-REQUEST SUBREDDITS (High conversion)
         "forhire",  # People posting job/service requests
         "slavelabour",  # Small gigs and tasks
         "Jobs4Bitcoins",  # Crypto-related work
         "hire",  # General hiring/service requests
+        "freelance_forhire",  # Freelance service requests
+        "hireawriter",  # Hiring requests (can include tech writers)
+        "GetEmployed",  # Job/service seeking
+        
+        # TIER 2: BUSINESS HELP-SEEKING (Medium conversion)
         "entrepreneur",  # Business owners asking for help
         "startups",  # Startup founders seeking services
         "smallbusiness",  # Small business help requests
         "SaaS",  # SaaS business discussions
-        # TECH-SPECIFIC WITH HELP REQUESTS
+        "Entrepreneur_Ideas",  # Entrepreneurs exploring solutions
+        
+        # TIER 3: TECH-SPECIFIC WITH HELP REQUESTS (Medium-Low conversion)
         "learnmachinelearning",  # People asking for help
         "cryptocurrency",  # Crypto help/advice
         "CryptoTechnology",  # Technical crypto questions
         "web3",  # Web3 development help
         "ethdev",  # Ethereum development help
         "solidity",  # Smart contract help
+        "cryptodevs",  # Crypto developers asking questions
+        "realestateinvesting",  # Real estate investors (RWA target)
+        "RealEstate",  # Real estate professionals (RWA target)
     ])
 
 
