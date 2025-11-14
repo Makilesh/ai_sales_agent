@@ -213,8 +213,16 @@ def main():
     parser.add_argument(
         '--service',
         type=str,
-        choices=['rwa', 'crypto', 'ai', 'blockchain', 'general', 'all'],
-        help='Service inquiry type (rwa, crypto, ai, blockchain, general, all). Uses keywords where people are ASKING for that service.'
+        choices=[
+            # Platform-specific presets (optimized for Reddit or LinkedIn)
+            'rwa_reddit', 'rwa_linkedin', 
+            'crypto_reddit', 'crypto_linkedin',
+            'ai_reddit', 'ai_linkedin',
+            'blockchain_reddit', 'blockchain_linkedin',
+            # Universal presets (work on both platforms)
+            'rwa', 'crypto', 'ai', 'blockchain', 'general', 'all'
+        ],
+        help='Service inquiry type. Platform-specific: rwa_reddit, rwa_linkedin, etc. Universal: rwa, crypto, ai, blockchain, general, all'
     )
     parser.add_argument(
         '--max-total-leads',
