@@ -173,19 +173,21 @@ python main.py --sources reddit linkedin_apify --service general --qualify --max
 - **Platform-specific**: `rwa_reddit`, `rwa_linkedin`, `crypto_reddit`, `crypto_linkedin`, `ai_reddit`, `ai_linkedin`, `blockchain_reddit`, `blockchain_linkedin`
 - **Universal**: `rwa`, `crypto`, `ai`, `blockchain`, `general`, `all`
 
-## Project Structure
+## LLM Qualification System
 
 ### Dual-Tier Architecture
 1. **Primary LLM**: OpenAI GPT-4-turbo
    - High quality, strict filtering
    - ~$0.01 per lead
    - Handles initial qualification attempts
+   - Industry-leading accuracy for service inquiry detection
 
-2. **Fallback LLM**: Gemini 2.5 Flash
-   - Activates when OpenAI fails (quota/rate limits)
+2. **Fallback LLM**: Gemini 2.5 Flash (Backup Only)
+   - **Activates automatically when OpenAI fails** (quota/rate limits/errors)
    - 10x cheaper (~$0.001 per lead)
    - Faster response time (1-2s vs 2-3s)
    - Ensures zero downtime
+   - **Not a replacement** - only used when OpenAI is unavailable
 
 ### Pre-Validation Filter (94.6% Cost Savings)
 Before expensive LLM calls, leads go through 3-stage validation:
@@ -212,7 +214,7 @@ Each lead receives:
   "confidence_score": 0.85,
   "reason": "User explicitly asks for RWA tokenization platform...",
   "service_match": ["RWA", "Blockchain", "Crypto"],
-  "llm_provider": "gemini"  // or "openai"
+  "llm_provider": "openai"  // "gemini" only if OpenAI fails
 }
 ```
 
@@ -255,7 +257,7 @@ ai-sales-agent/
 
 ## LLM Qualification System
 
-### Environment Variables (.env)
+### Configuration (.env)
 ```bash
 # Reddit API
 REDDIT_CLIENT_ID=your_client_id
@@ -278,13 +280,13 @@ LINKEDIN_APIFY_ACTOR=supreme_coder/linkedin-post
 LINKEDIN_PUBLIC_ENABLED=false
 LINKEDIN_COOKIE=your_li_at_cookie
 
-# OpenAI (Primary LLM)
+# OpenAI (Primary LLM - Required)
 OPENAI_API_KEY=sk-proj-your_openai_key
 LLM_MODEL=gpt-4-turbo
 MIN_CONFIDENCE_SCORE=0.7
 MAX_CONCURRENT_LLM_REQUESTS=5
 
-# Gemini (Fallback LLM)
+# Gemini (Fallback LLM - Optional but Recommended)
 GEMINI_API_KEY=AIza_your_gemini_key
 ```
 
@@ -319,21 +321,24 @@ Customize:
 - **Gemini fallback**: Additional 10x savings when activated
 
 ### Speed
-- **OpenAI GPT-4-turbo**: 2-3 seconds per lead
-- **Gemini 2.5 Flash**: 1-2 seconds per lead
+- **OpenAI GPT-4-turbo**: 2-3 seconds per lead (primary)
+- **Gemini 2.5 Flash**: 1-2 seconds per lead (fallback only)
 - **Pre-validation**: <0.1 seconds per lead
 
 ### Reliability
-- **Zero downtime**: Gemini catches all OpenAI failures
-- **Quota protection**: Automatic fallback on 429 errors
+- **Primary**: OpenAI GPT-4-turbo handles all requests
+- **Automatic fallback**: Gemini catches OpenAI failures (quota/rate limits)
+- **Zero downtime**: Seamless transition between providers
 - **Rate limit handling**: Respects all platform limits
 
 ## Troubleshooting
 
 ### OpenAI Quota Exceeded
-✅ **Gemini automatically activates** - no action needed!
+✅ **Gemini fallback automatically activates** - no action needed!
+- System uses **OpenAI GPT-4-turbo by default** for all requests
+- Only switches to Gemini when OpenAI fails (quota exceeded, rate limits, errors)
 - You'll see: `⚠️ OpenAI failed..., trying Gemini fallback...`
-- Leads continue processing seamlessly
+- Leads continue processing seamlessly with backup provider
 
 ### No Qualified Leads
 - Check `MIN_CONFIDENCE_SCORE` in .env (default: 0.7)
@@ -379,8 +384,8 @@ $ python main.py --sources reddit --service rwa_reddit --qualify --max-total-lea
 
 ## Contributing
 
-This is a proprietary project. For questions or issues, contact the development team.
+This is a proprietary project. For questions or issues, contact the Makilesh
 
 ## License
 
-Proprietary - All rights reserved
+Proprietary - All rights reserved to @Makilesh
