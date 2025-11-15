@@ -1,4 +1,4 @@
-"""LLM-based lead qualification using OpenAI GPT-4-turbo.
+"""LLM-based lead qualification using OpenAI GPT-4-turbo with Gemini fallback.
 
 STRICT QUALIFICATION: Only qualifies leads where someone is ACTIVELY SEEKING our services.
 Not discussions, news, opinions, or educational content - only service inquiries.
@@ -11,6 +11,7 @@ from typing import Optional
 from decouple import config
 from openai import OpenAI
 from openai import OpenAIError
+import google.generativeai as genai
 
 from models.lead import Lead
 
@@ -20,7 +21,7 @@ class LLMLeadQualifier:
     
     def __init__(self, api_key: Optional[str] = None, model: str = "gpt-4-turbo", target_service: Optional[str] = None):
         """
-        Initialize LLM qualifier.
+        Initialize LLM qualifier with OpenAI and Gemini fallback.
         
         Args:
             api_key: OpenAI API key (defaults to OPENAI_API_KEY from .env)
@@ -34,6 +35,18 @@ class LLMLeadQualifier:
         self.model = model
         self.target_service = target_service
         self.client = OpenAI(api_key=self.api_key)
+        
+        # Initialize Gemini as fallback
+        self.gemini_api_key = config("GEMINI_API_KEY", default="")
+        self.gemini_model = None
+        if self.gemini_api_key:
+            try:
+                genai.configure(api_key=self.gemini_api_key)
+                self.gemini_model = genai.GenerativeModel('gemini-pro')
+                print("✅ Gemini fallback configured successfully")
+            except Exception as e:
+                print(f"⚠️ Gemini fallback unavailable: {str(e)}")
+                self.gemini_model = None
     
     def _build_qualification_prompt(self, lead: Lead) -> str:
         """Build strict qualification prompt - only accept explicit service requests."""
@@ -331,6 +344,84 @@ Response JSON (no markdown):
         
         return True
     
+    def _call_gemini(self, prompt: str) -> dict:
+        """
+        Call Gemini API as fallback when OpenAI fails.
+        
+        Args:
+            prompt: The qualification prompt
+            
+        Returns:
+            dict: Qualification result matching OpenAI format
+        """
+        if not self.gemini_model:
+            raise Exception("Gemini not configured. Set GEMINI_API_KEY in .env")
+        
+        try:
+            # Build Gemini prompt with JSON instruction
+            gemini_prompt = f"""{prompt}
+
+**IMPORTANT: Respond with ONLY valid JSON in this exact format:**
+{{
+    "is_qualified": true or false,
+    "confidence_score": 0.0 to 1.0,
+    "reason": "explanation",
+    "service_match": ["service1", "service2"]
+}}
+
+Do not include any text before or after the JSON. Only output the JSON object."""
+
+            # Call Gemini
+            response = self.gemini_model.generate_content(
+                gemini_prompt,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=0.2,
+                    max_output_tokens=300,
+                )
+            )
+            
+            # Parse response
+            result_text = response.text.strip()
+            
+            # Remove markdown if present
+            if result_text.startswith("```json"):
+                result_text = result_text[7:]
+            if result_text.startswith("```"):
+                result_text = result_text[3:]
+            if result_text.endswith("```"):
+                result_text = result_text[:-3]
+            result_text = result_text.strip()
+            
+            result = json.loads(result_text)
+            
+            # Validate structure
+            required_keys = {"is_qualified", "confidence_score", "reason", "service_match"}
+            if not required_keys.issubset(result.keys()):
+                return {
+                    "is_qualified": False,
+                    "confidence_score": 0.0,
+                    "reason": "Invalid response structure from Gemini",
+                    "service_match": [],
+                    "error": "Missing required keys in Gemini response"
+                }
+            
+            # Ensure correct types
+            result["is_qualified"] = bool(result["is_qualified"])
+            result["confidence_score"] = float(result["confidence_score"])
+            result["reason"] = str(result["reason"])
+            result["service_match"] = list(result["service_match"]) if result["service_match"] else []
+            
+            # Clamp confidence score
+            result["confidence_score"] = max(0.0, min(1.0, result["confidence_score"]))
+            
+            # Add note that Gemini was used
+            result["llm_provider"] = "gemini"
+            
+            return result
+            
+        except Exception as e:
+            raise Exception(f"Gemini API call failed: {str(e)}")
+    
     def qualify_lead(self, lead: Lead) -> dict:
         """
         Qualify a lead using strict validation + GPT-4-turbo.
@@ -439,16 +530,33 @@ Response JSON (no markdown):
             # Clamp confidence score
             result["confidence_score"] = max(0.0, min(1.0, result["confidence_score"]))
             
+            # Mark that OpenAI was used
+            result["llm_provider"] = "openai"
+            
             return result
             
         except OpenAIError as e:
-            return {
-                "is_qualified": False,
-                "confidence_score": 0.0,
-                "reason": f"OpenAI API error: {str(e)}",
-                "service_match": [],
-                "error": str(e)
-            }
+            # Try Gemini as fallback
+            if self.gemini_model:
+                print(f"⚠️ OpenAI failed ({str(e)[:50]}...), trying Gemini fallback...")
+                try:
+                    return self._call_gemini(prompt)
+                except Exception as gemini_error:
+                    return {
+                        "is_qualified": False,
+                        "confidence_score": 0.0,
+                        "reason": f"Both OpenAI and Gemini failed. OpenAI: {str(e)}, Gemini: {str(gemini_error)}",
+                        "service_match": [],
+                        "error": f"OpenAI: {str(e)}, Gemini: {str(gemini_error)}"
+                    }
+            else:
+                return {
+                    "is_qualified": False,
+                    "confidence_score": 0.0,
+                    "reason": f"OpenAI API error: {str(e)}",
+                    "service_match": [],
+                    "error": str(e)
+                }
         
         except json.JSONDecodeError as e:
             return {
