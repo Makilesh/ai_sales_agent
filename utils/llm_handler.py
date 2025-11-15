@@ -42,8 +42,9 @@ class LLMLeadQualifier:
         if self.gemini_api_key:
             try:
                 genai.configure(api_key=self.gemini_api_key)
-                self.gemini_model = genai.GenerativeModel('gemini-pro')
-                print("✅ Gemini fallback configured successfully")
+                # Use gemini-2.5-flash (fast and cost-effective)
+                self.gemini_model = genai.GenerativeModel('gemini-2.5-flash')
+                print("✅ Gemini 2.5 Flash fallback configured successfully")
             except Exception as e:
                 print(f"⚠️ Gemini fallback unavailable: {str(e)}")
                 self.gemini_model = None
@@ -344,12 +345,14 @@ Response JSON (no markdown):
         
         return True
     
-    def _call_gemini(self, prompt: str) -> dict:
+    def _call_gemini(self, prompt: str, lead: Lead = None) -> dict:
         """
         Call Gemini API as fallback when OpenAI fails.
+        Uses simplified prompt to avoid recitation blocking.
         
         Args:
-            prompt: The qualification prompt
+            prompt: The qualification prompt (may not be used to avoid recitation)
+            lead: The original Lead object (used to extract content directly)
             
         Returns:
             dict: Qualification result matching OpenAI format
@@ -358,41 +361,78 @@ Response JSON (no markdown):
             raise Exception("Gemini not configured. Set GEMINI_API_KEY in .env")
         
         try:
-            # Build Gemini prompt with JSON instruction
-            gemini_prompt = f"""{prompt}
+            # Build ultra-simple prompt to avoid recitation blocking
+            # Don't use the long OpenAI prompt - it triggers recitation
+            if lead:
+                lead_text = f"{lead.title}\n\n{lead.content}" if lead.title else lead.content
+                lead_text = lead_text[:800]  # Limit length
+            else:
+                # Fallback: extract from prompt
+                content_start = prompt.find("**Lead Content:**")
+                if content_start != -1:
+                    rules_start = prompt.find("**QUALIFICATION RULES:**")
+                    lead_text = prompt[content_start:rules_start].replace("**Lead Content:**", "").strip()[:800]
+                else:
+                    lead_text = prompt[:800]
+            
+            # Simple, direct prompt (no long instructions that might trigger recitation)
+            # Keep it as simple and direct as the working test prompts
+            gemini_prompt = f'"{lead_text}" - Is this seeking RWA/Crypto/Blockchain/AI services? JSON: {{"is_qualified": true/false, "confidence_score": 0.0-1.0, "reason": "why", "service_match": ["services"]}}'
 
-**IMPORTANT: Respond with ONLY valid JSON in this exact format:**
-{{
-    "is_qualified": true or false,
-    "confidence_score": 0.0 to 1.0,
-    "reason": "explanation",
-    "service_match": ["service1", "service2"]
-}}
-
-Do not include any text before or after the JSON. Only output the JSON object."""
-
-            # Call Gemini
+            # Call Gemini with relaxed safety settings
+            from google.generativeai.types import HarmCategory, HarmBlockThreshold
+            
             response = self.gemini_model.generate_content(
                 gemini_prompt,
                 generation_config=genai.types.GenerationConfig(
                     temperature=0.2,
                     max_output_tokens=300,
-                )
+                ),
+                safety_settings={
+                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
+                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
+                }
             )
             
-            # Parse response
+            # Check if response was blocked
+            if not response.parts:
+                finish_reason = response.candidates[0].finish_reason if response.candidates else "UNKNOWN"
+                safety_ratings = response.candidates[0].safety_ratings if response.candidates else []
+                raise Exception(f"Gemini blocked response. Finish reason: {finish_reason}, Safety: {safety_ratings}")
+            
+            # Parse response - Gemini with JSON mime type returns text that needs parsing
             result_text = response.text.strip()
             
-            # Remove markdown if present
-            if result_text.startswith("```json"):
-                result_text = result_text[7:]
-            if result_text.startswith("```"):
-                result_text = result_text[3:]
-            if result_text.endswith("```"):
-                result_text = result_text[:-3]
-            result_text = result_text.strip()
+            # Extract JSON from response (Gemini sometimes adds text before/after)
+            # Try to find JSON object in the response
+            json_start = result_text.find('{')
+            json_end = result_text.rfind('}')
             
-            result = json.loads(result_text)
+            if json_start != -1 and json_end != -1:
+                result_text = result_text[json_start:json_end+1]
+            
+            # Try to parse as JSON
+            try:
+                result = json.loads(result_text)
+            except json.JSONDecodeError:
+                # If JSON parsing fails, try cleaning markdown
+                if result_text.startswith("```json"):
+                    result_text = result_text[7:]
+                if result_text.startswith("```"):
+                    result_text = result_text[3:]
+                if result_text.endswith("```"):
+                    result_text = result_text[:-3]
+                result_text = result_text.strip()
+                
+                # Try again after cleaning
+                json_start = result_text.find('{')
+                json_end = result_text.rfind('}')
+                if json_start != -1 and json_end != -1:
+                    result_text = result_text[json_start:json_end+1]
+                
+                result = json.loads(result_text)
             
             # Validate structure
             required_keys = {"is_qualified", "confidence_score", "reason", "service_match"}
@@ -419,6 +459,10 @@ Do not include any text before or after the JSON. Only output the JSON object.""
             
             return result
             
+        except json.JSONDecodeError as e:
+            # Include the actual response text in error for debugging
+            raw_response = response.text if 'response' in locals() else "No response"
+            raise Exception(f"Gemini JSON parse error: {str(e)}. Raw response: {raw_response[:500]}")
         except Exception as e:
             raise Exception(f"Gemini API call failed: {str(e)}")
     
@@ -540,7 +584,7 @@ Do not include any text before or after the JSON. Only output the JSON object.""
             if self.gemini_model:
                 print(f"⚠️ OpenAI failed ({str(e)[:50]}...), trying Gemini fallback...")
                 try:
-                    return self._call_gemini(prompt)
+                    return self._call_gemini(prompt, lead=lead)
                 except Exception as gemini_error:
                     return {
                         "is_qualified": False,
