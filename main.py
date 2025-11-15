@@ -296,9 +296,8 @@ def main():
         if not args.no_filter:
             leads = filter_qualified_leads(leads)
         
-        # Save results
-        print(f"\nSaving leads to {args.output}...")
-        append_leads(leads, args.output)
+        # NOTE: We DON'T save here - wait until after LLM qualification
+        # to ensure qualification_result is included in saved data
         
         # LLM qualification (auto or prompt based on settings)
         should_qualify = args.qualify or (settings.openai_api_key and not args.qualify)
@@ -327,11 +326,7 @@ def main():
                     for lead, qual in zip(leads, qualifications):
                         lead.qualification_result = qual
                     
-                    # Save leads with qualification results
-                    print(f"\n💾 Saving leads with qualification results to {args.output}...")
-                    save_leads(leads, args.output)
-                    
-                    # Filter to only qualified leads
+                    # Filter to only qualified leads for Excel export
                     qualified_results = [
                         (lead, qual) 
                         for lead, qual in zip(leads, qualifications)
@@ -371,6 +366,11 @@ def main():
                 except Exception as e:
                     print(f"\n⚠️  LLM qualification failed: {e}")
                     print("Continuing without LLM qualification...")
+        
+        # Save leads (with or without qualification results) to JSON
+        # Uses append_leads to merge with existing data and deduplicate by URL
+        print(f"\n💾 Saving {len(leads)} leads to {args.output}...")
+        append_leads(leads, args.output)
         
         print("\n" + "=" * 60)
         print(f"✓ Successfully scraped {len(leads)} leads")
