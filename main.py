@@ -296,8 +296,11 @@ def main():
         if not args.no_filter:
             leads = filter_qualified_leads(leads)
         
-        # NOTE: We DON'T save here - wait until after LLM qualification
-        # to ensure qualification_result is included in saved data
+        # Save leads to JSON BEFORE LLM qualification
+        # This ensures we have all scraped data even if LLM fails
+        print(f"\n💾 Saving {len(leads)} leads to {args.output}...")
+        append_leads(leads, args.output)
+        print(f"   ✓ Saved to {args.output} (deduped by URL)")
         
         # LLM qualification (auto or prompt based on settings)
         should_qualify = args.qualify or (settings.openai_api_key and not args.qualify)
@@ -367,10 +370,12 @@ def main():
                     print(f"\n⚠️  LLM qualification failed: {e}")
                     print("Continuing without LLM qualification...")
         
-        # Save leads (with or without qualification results) to JSON
-        # Uses append_leads to merge with existing data and deduplicate by URL
-        print(f"\n💾 Saving {len(leads)} leads to {args.output}...")
-        append_leads(leads, args.output)
+        # Save leads again with qualification results (updates the file)
+        # This ensures qualification_result field is persisted
+        if should_qualify:
+            print(f"\n💾 Updating leads with qualification results in {args.output}...")
+            append_leads(leads, args.output)
+            print(f"   ✓ Updated {len(leads)} leads with qualification data")
         
         print("\n" + "=" * 60)
         print(f"✓ Successfully scraped {len(leads)} leads")
