@@ -23,6 +23,9 @@ class Lead:
     subreddit: str | None = None
     linkedin_post_type: str | None = None  # 'post', 'article', 'video', 'comment'
     
+    # LLM qualification result (populated after qualification)
+    qualification_result: dict[str, Any] | None = None
+    
     def __post_init__(self) -> None:
         """Validate lead data after initialization."""
         self.validate()
