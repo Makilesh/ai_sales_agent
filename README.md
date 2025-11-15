@@ -29,87 +29,6 @@ AI-powered lead scraper that collects and qualifies leads from Reddit, Discord, 
 ```bash
 # 1. Create virtual environment
 python -m venv venv
-venv\Scripts\activate
-
-# 2. Install dependencies
-pip install -r requirements.txt
-
-# 3. Configure credentials
-copy .env.example .env
-# Edit .env with your API keys
-
-#### Reddit API Setup
-1. Go to https://www.reddit.com/prefs/apps
-2. Click "Create App" or "Create Another App"
-3. Choose "script" as the app type
-4. Copy the client ID and client secret
-
-#### Discord Bot Setup
-1. Go to https://discord.com/developers/applications
-2. Create a "New Application"
-3. Go to the "Bot" section and create a bot
-4. Copy the bot token
-
-#### Slack API Setup
-1. Go to https://api.slack.com/apps
-2. Create a "New App"
-3. Install the app to your workspace
-4. Copy the Bot User OAuth Token and App-Level Token
-
-#### OpenAI API Setup
-1. Go to https://platform.openai.com/api-keys
-2. Create a new API key
-3. Copy the key (starts with `sk-proj-...`)
-4. Note: GPT-4-turbo costs ~$0.01 per lead
-
-#### Gemini API Setup (Fallback - Recommended)
-1. Go to https://makersuite.google.com/app/apikey
-2. Create a new API key
-3. Copy the key (starts with `AIza...`)
-4. Gemini 2.5 Flash is 10x cheaper and faster than GPT-4
-5. Automatically activates when OpenAI quota exceeded
-
-#### LinkedIn Scraping Setup
-**Option 1: Public Scraping (Experimental)**
-- Set `LINKEDIN_PUBLIC_ENABLED=true` in .env
-- ⚠️ High ban risk - use with caution
-
-**Option 2: Apify Integration (Recommended)**
-1. Go to https://console.apify.com/account/integrations
-2. Get free API token ($5 credit = ~5000 posts)
-3. Set `LINKEDIN_APIFY_ENABLED=true` in .env
-4. Copy token to `APIFY_TOKEN` in .env
-
-## Project Structure
-
-```
-ai-sales-agent/
-├── .env                    # Environment variables (not in git)
-├── .env.example           # Template for environment variables
-├── .gitignore             # Git ignore rules
-├── requirements.txt       # Python dependencies
-└── README.md             # This file
-```
-
-## Next Steps
-
-After setup, you can begin implementing:
-- Reddit scraper module
-- Discord scraper module
-- Slack scraper module
-- Data processing pipeline
-- Lead qualification logic
-
-## License
-
-Proprietary - All rights reserved
-
-
-## Quick Start
-
-```bash
-# 1. Create virtual environment
-python -m venv venv
 venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Linux/Mac
 
@@ -124,6 +43,102 @@ copy .env.example .env  # Windows
 # 4. Run scraper with qualification
 python main.py --sources reddit --service rwa --qualify --max-total-leads 500
 ```
+
+## API Setup
+
+### Reddit API Setup
+1. Go to https://www.reddit.com/prefs/apps
+2. Click "Create App" or "Create Another App"
+3. Choose "script" as the app type
+4. Copy the client ID and client secret
+
+### Discord Bot Setup
+1. Go to https://discord.com/developers/applications
+2. Create a "New Application"
+3. Go to the "Bot" section and create a bot
+4. Copy the bot token
+
+### Slack API Setup
+1. Go to https://api.slack.com/apps
+2. Create a "New App"
+3. Install the app to your workspace
+4. Copy the Bot User OAuth Token and App-Level Token
+
+### OpenAI API Setup
+1. Go to https://platform.openai.com/api-keys
+2. Create a new API key
+3. Copy the key (starts with `sk-proj-...`)
+4. Note: GPT-4-turbo costs ~$0.01 per lead
+
+### Gemini API Setup (Fallback - Recommended)
+1. Go to https://makersuite.google.com/app/apikey
+2. Create a new API key
+3. Copy the key (starts with `AIza...`)
+4. Gemini 2.5 Flash is 10x cheaper and faster than GPT-4
+5. Automatically activates when OpenAI quota exceeded
+
+### LinkedIn Scraping Setup
+**Option 1: Public Scraping (Experimental)**
+- Set `LINKEDIN_PUBLIC_ENABLED=true` in .env
+- ⚠️ High ban risk - use with caution
+
+**Option 2: Apify Integration (Recommended)**
+1. Go to https://console.apify.com/account/integrations
+2. Get free API token ($5 credit = ~5000 posts)
+3. Set `LINKEDIN_APIFY_ENABLED=true` in .env
+4. Copy token to `APIFY_TOKEN` in .env
+
+## CLI Reference
+
+### Full Help Output
+
+```bash
+python main.py --help
+```
+
+```
+usage: main.py [-h] [--sources {reddit,discord,slack,linkedin_public,linkedin_apify} ...]
+               [--service {rwa_reddit,rwa_linkedin,crypto_reddit,crypto_linkedin,ai_reddit,ai_linkedin,blockchain_reddit,blockchain_linkedin,rwa,crypto,ai,blockchain,general,all}]
+               [--max-total-leads MAX_TOTAL_LEADS] [--output OUTPUT]
+               [--no-filter] [--qualify] [--filter-service {RWA,Crypto,AI/ML,Blockchain,Web3}]
+
+Multi-Source Lead Scraping Engine - Phase 1
+
+optional arguments:
+  -h, --help            show this help message and exit
+  
+  --sources {reddit,discord,slack,linkedin_public,linkedin_apify} ...
+                        Sources to scrape (default: reddit, discord, slack)
+                        
+  --service {rwa_reddit,rwa_linkedin,crypto_reddit,crypto_linkedin,ai_reddit,ai_linkedin,blockchain_reddit,blockchain_linkedin,rwa,crypto,ai,blockchain,general,all}
+                        Service inquiry type. Platform-specific: rwa_reddit, rwa_linkedin, etc.
+                        Universal: rwa, crypto, ai, blockchain, general, all
+                        
+  --max-total-leads MAX_TOTAL_LEADS
+                        Global limit - stop after this many leads (default: 200)
+                        
+  --output OUTPUT       Output file path (default: data/leads.json)
+  
+  --no-filter          Skip lead qualification filtering
+  
+  --qualify            Automatically qualify leads with LLM (no prompt)
+  
+  --filter-service {RWA,Crypto,AI/ML,Blockchain,Web3}
+                        LLM filter: ONLY qualify leads asking for specific service
+                        (RWA, Crypto, AI/ML, Blockchain, Web3)
+```
+
+### Command-Line Arguments Explained
+
+| Argument | Type | Description | Default |
+|----------|------|-------------|---------|
+| `--sources` | Multiple choice | Platforms to scrape from. Options: `reddit`, `discord`, `slack`, `linkedin_public`, `linkedin_apify` | `reddit discord slack` |
+| `--service` | Choice | Keyword preset for targeted scraping. See [Available Services](#available-services) | None (uses all keywords) |
+| `--max-total-leads` | Integer | Global limit to stop after N leads collected | `200` |
+| `--output` | String | JSON file path for scraped leads | `data/leads.json` |
+| `--no-filter` | Flag | Disable pre-qualification filtering (scrape everything) | False (filtering enabled) |
+| `--qualify` | Flag | Auto-run LLM qualification without prompting | False (will prompt if OpenAI key exists) |
+| `--filter-service` | Choice | LLM will ONLY qualify leads asking for this specific service | None (all services) |
 
 ## Usage Examples
 
@@ -145,6 +160,12 @@ python main.py --sources reddit --qualify --filter-service RWA
 
 # Skip LLM qualification (just scrape)
 python main.py --sources reddit --service rwa_reddit --no-filter
+
+# Scrape all sources with auto-qualification (no prompts)
+python main.py --sources reddit discord slack linkedin_apify --qualify
+
+# Use general keywords across multiple platforms
+python main.py --sources reddit linkedin_apify --service general --qualify --max-total-leads 1000
 ```
 
 ## Available Services
@@ -152,7 +173,7 @@ python main.py --sources reddit --service rwa_reddit --no-filter
 - **Platform-specific**: `rwa_reddit`, `rwa_linkedin`, `crypto_reddit`, `crypto_linkedin`, `ai_reddit`, `ai_linkedin`, `blockchain_reddit`, `blockchain_linkedin`
 - **Universal**: `rwa`, `crypto`, `ai`, `blockchain`, `general`, `all`
 
-## LLM Qualification System
+## Project Structure
 
 ### Dual-Tier Architecture
 1. **Primary LLM**: OpenAI GPT-4-turbo
@@ -232,7 +253,7 @@ ai-sales-agent/
 └── README.md                    # This file
 ```
 
-## Configuration
+## LLM Qualification System
 
 ### Environment Variables (.env)
 ```bash
@@ -329,11 +350,6 @@ Customize:
 - Adjust `MAX_CONCURRENT_LLM_REQUESTS` if hitting OpenAI rate limits
 - Gemini has more generous quota than OpenAI
 
-## Documentation
-
-- **GEMINI_FALLBACK_COMPLETE.md** - Dual LLM system architecture and implementation
-- **PREVALIDATION_EXPLAINED.md** - 3-stage pre-validation filter explained with examples
-- **config/settings.py** - All keywords, subreddits, and configuration parameters
 
 ## Example Run
 
