@@ -26,6 +26,16 @@ lxml>=5.3.0
 # LinkedIn Apify Scraping (PRODUCTION - recommended)
 # Used by linkedin_apify_scraper.py for professional API integration
 # No account risk - reliable data extraction via Apify service
+# 
+# Setup:
+# 1. Create free account at https://apify.com
+# 2. Get API token from https://console.apify.com/account/integrations
+# 3. Set APIFY_TOKEN in .env file
+# 4. Install: pip install apify-client
+
+# Actor used: supreme_coder/linkedin-post (no cookies required)
+# """
+
 apify-client>=1.7.0
 
 # LLM Lead Qualification

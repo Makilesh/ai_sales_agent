@@ -1,23 +1,3 @@
-"""
-LinkedIn Scraper via Apify API - SERVICE LEAD DISCOVERY
-
-This scraper finds POTENTIAL CLIENTS asking for services.
-Focus: People/companies looking for help with RWA, crypto, blockchain, AI, etc.
-
-Features:
-- Service classification by industry (RWA, crypto, AI, blockchain, etc.)
-- No risk to LinkedIn account (uses Apify infrastructure)
-- Handles authentication, rate limiting, and anti-bot measures
-- Global lead limit to control costs
-
-Setup:
-1. Create free account at https://apify.com
-2. Get API token from https://console.apify.com/account/integrations
-3. Set APIFY_TOKEN in .env file
-4. Install: pip install apify-client
-
-Actor used: supreme_coder/linkedin-post (no cookies required)
-"""
 
 import asyncio
 import urllib.parse
