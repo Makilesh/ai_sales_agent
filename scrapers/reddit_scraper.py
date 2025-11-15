@@ -1,4 +1,3 @@
-"""Reddit scraper implementation."""
 
 import asyncio
 from datetime import datetime

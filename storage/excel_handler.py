@@ -1,4 +1,3 @@
-"""Excel export handler for qualified leads."""
 
 from datetime import datetime
 from pathlib import Path

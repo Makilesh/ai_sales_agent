@@ -337,7 +337,7 @@ Customize:
 
 ### No Qualified Leads
 - Check `MIN_CONFIDENCE_SCORE` in .env (default: 0.7)
-- Review pre-validation logic in `PREVALIDATION_EXPLAINED.md`
+- Review pre-validation logic in `config/settings.py`
 - Most leads are discussions, not inquiries (strict filtering by design)
 
 ### LinkedIn Ban Risk

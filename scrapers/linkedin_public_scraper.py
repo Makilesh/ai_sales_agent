@@ -1,21 +1,4 @@
-"""
-EXPERIMENTAL LinkedIn Public Scraper - NO LOGIN REQUIRED
 
-⚠️ WARNING: This scraper is HIGHLY EXPERIMENTAL and carries significant ban risks.
-- LinkedIn actively blocks automated scraping
-- Use ONLY for small-scale testing (Phase 1.1 - Lead Discovery)
-- Designed to avoid login but may still trigger rate limits
-- DO NOT use in production without proper LinkedIn API access
-- Always prefer official LinkedIn API when available
-
-Anti-ban measures implemented:
-- 2 requests/minute maximum (30+ second delays)
-- Random 8-15 second delays between requests
-- Rotating user agents (5 desktop variants)
-- Only 10 results per keyword (no pagination)
-- 403/429/999 errors return empty list (no retries)
-- Daily limit: 20 requests
-"""
 
 import asyncio
 import random

@@ -1,4 +1,4 @@
-"""Lead data model for scraped leads."""
+
 
 from dataclasses import dataclass, field, asdict
 from datetime import datetime

@@ -1,4 +1,3 @@
-"""JSON storage handler for leads."""
 
 import json
 from pathlib import Path
