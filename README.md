@@ -229,8 +229,6 @@ ai-sales-agent/
 ├── .env.example                # Template for credentials
 ├── main.py                      # CLI entry point
 ├── requirements.txt             # Python dependencies
-├── GEMINI_FALLBACK_COMPLETE.md # Gemini implementation docs
-├── PREVALIDATION_EXPLAINED.md  # Pre-validation filter docs
 └── README.md                    # This file
 ```
 
